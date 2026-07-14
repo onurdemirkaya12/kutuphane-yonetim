@@ -1,0 +1,6 @@
+{
+  "name": "Kütüphane Yönetimi",
+  "description": "Kişisel kütüphane, kitap izleme ve not alma uygulaması.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
