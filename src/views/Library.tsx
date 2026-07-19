@@ -219,31 +219,53 @@ export function Library() {
                       onClick={async () => {
                         try {
                           const query = `${selectedBook.title} ${selectedBook.author}`;
-                          const response = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=1`);
-                          if (response.ok) {
-                            const data = await response.json();
-                            if (data.docs && data.docs.length > 0) {
-                              const doc = data.docs[0];
-                              const updates: Partial<Book> = {};
-                              if (!selectedBook.coverImageUrl && doc.cover_i) {
-                                updates.coverImageUrl = `https://covers.openlibrary.org/b/id/${doc.cover_i}-M.jpg`;
+                          let foundUpdates = false;
+                          const updates: Partial<Book> = {};
+
+                          // 1. Önce Google Books API
+                          const gbResponse = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=1`);
+                          if (gbResponse.ok) {
+                            const gbData = await gbResponse.json();
+                            if (gbData.items && gbData.items.length > 0) {
+                              const volumeInfo = gbData.items[0].volumeInfo;
+                              if (!selectedBook.coverImageUrl && volumeInfo.imageLinks?.thumbnail) {
+                                updates.coverImageUrl = volumeInfo.imageLinks.thumbnail.replace('http:', 'https:');
                               }
-                              if (!selectedBook.pageCount && doc.number_of_pages_median) {
-                                updates.pageCount = doc.number_of_pages_median;
+                              if (!selectedBook.pageCount && volumeInfo.pageCount) {
+                                updates.pageCount = volumeInfo.pageCount;
                               }
-                              if (!selectedBook.description && doc.first_publish_year) {
-                                updates.description = `İlk basım yılı: ${doc.first_publish_year}`;
+                              if (!selectedBook.description && volumeInfo.description) {
+                                updates.description = volumeInfo.description;
                               }
-                              
-                              if (Object.keys(updates).length > 0) {
-                                updateBook(selectedBook.id, updates);
-                                setSelectedBook({ ...selectedBook, ...updates });
-                              } else {
-                                alert("Ek bilgi bulunamadı.");
-                              }
-                            } else {
-                              alert("İnternette bu kitaba ait ek bilgi bulunamadı.");
+                              foundUpdates = true;
                             }
+                          }
+
+                          // 2. Bulunamayan eksikler varsa Open Library API
+                          if (!foundUpdates || !updates.coverImageUrl || !updates.pageCount || !updates.description) {
+                            const olResponse = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=1`);
+                            if (olResponse.ok) {
+                              const olData = await olResponse.json();
+                              if (olData.docs && olData.docs.length > 0) {
+                                const doc = olData.docs[0];
+                                if (!selectedBook.coverImageUrl && !updates.coverImageUrl && doc.cover_i) {
+                                  updates.coverImageUrl = `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg`;
+                                }
+                                if (!selectedBook.pageCount && !updates.pageCount && doc.number_of_pages_median) {
+                                  updates.pageCount = doc.number_of_pages_median;
+                                }
+                                if (!selectedBook.description && !updates.description && doc.first_publish_year) {
+                                  updates.description = `İlk basım yılı: ${doc.first_publish_year}`;
+                                }
+                              }
+                            }
+                          }
+                          
+                          if (Object.keys(updates).length > 0) {
+                            updateBook(selectedBook.id, updates);
+                            setSelectedBook({ ...selectedBook, ...updates });
+                          } else {
+                            alert("Ek bilgi bulunamadı.");
                           }
                         } catch (error) {
                           console.error("Bilgi getirilirken hata:", error);

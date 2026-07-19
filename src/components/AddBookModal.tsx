@@ -15,6 +15,7 @@ export function AddBookModal({ isOpen, onClose }: AddBookModalProps) {
   const [author, setAuthor] = useState('');
   const [pageCount, setPageCount] = useState('');
   const [description, setDescription] = useState('');
+  const [coverImageUrl, setCoverImageUrl] = useState('');
   const [isSearchingIsbn, setIsSearchingIsbn] = useState(false);
 
   const handleIsbnSearch = async () => {
@@ -22,23 +23,44 @@ export function AddBookModal({ isOpen, onClose }: AddBookModalProps) {
     setIsSearchingIsbn(true);
     try {
       const cleanIsbn = isbn.replace(/[- ]/g, '');
-      const response = await fetch(`https://openlibrary.org/search.json?isbn=${cleanIsbn}`);
-      if (response.ok) {
-        const data = await response.json();
-        if (data.docs && data.docs.length > 0) {
-          const doc = data.docs[0];
-          setTitle(doc.title || '');
-          setAuthor(doc.author_name ? doc.author_name.join(', ') : '');
-          if (doc.number_of_pages_median) {
-            setPageCount(doc.number_of_pages_median.toString());
+      
+      // 1. Önce Google Books API'den deneyelim (Açıklama ve Kapak için çok daha zengin)
+      const gbResponse = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanIsbn}`);
+      if (gbResponse.ok) {
+        const gbData = await gbResponse.json();
+        if (gbData.items && gbData.items.length > 0) {
+          const volumeInfo = gbData.items[0].volumeInfo;
+          setTitle(volumeInfo.title || '');
+          setAuthor(volumeInfo.authors ? volumeInfo.authors.join(', ') : '');
+          if (volumeInfo.pageCount) setPageCount(volumeInfo.pageCount.toString());
+          if (volumeInfo.description) setDescription(volumeInfo.description);
+          if (volumeInfo.imageLinks?.thumbnail) {
+            setCoverImageUrl(volumeInfo.imageLinks.thumbnail.replace('http:', 'https:'));
           }
-          if (doc.first_publish_year) {
-            setDescription(`İlk basım yılı: ${doc.first_publish_year}`);
-          }
-        } else {
-          alert('Bu ISBN numarasına ait kitap bulunamadı.');
+          setIsSearchingIsbn(false);
+          return; // Google'dan bulduysak burada bitir.
         }
       }
+
+      // 2. Google'da bulamazsak Open Library API'ye soralım
+      const olResponse = await fetch(`https://openlibrary.org/search.json?isbn=${cleanIsbn}`);
+      if (olResponse.ok) {
+        const olData = await olResponse.json();
+        if (olData.docs && olData.docs.length > 0) {
+          const doc = olData.docs[0];
+          setTitle(doc.title || '');
+          setAuthor(doc.author_name ? doc.author_name.join(', ') : '');
+          if (doc.number_of_pages_median) setPageCount(doc.number_of_pages_median.toString());
+          if (doc.first_publish_year && !description) setDescription(`İlk basım yılı: ${doc.first_publish_year}`);
+          if (doc.cover_i) {
+            setCoverImageUrl(`https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg`);
+          }
+          setIsSearchingIsbn(false);
+          return;
+        }
+      }
+      
+      alert('Bu ISBN numarasına ait kitap bulunamadı.');
     } catch (error) {
       console.error('ISBN araması başarısız:', error);
       alert('Arama sırasında bir hata oluştu.');
@@ -62,6 +84,7 @@ export function AddBookModal({ isOpen, onClose }: AddBookModalProps) {
       coverColor: randomColor,
       pageCount: pageCount ? parseInt(pageCount, 10) : undefined,
       description: description.trim() || undefined,
+      coverImageUrl: coverImageUrl || undefined,
       readPages: 0,
       addedAt: Date.now()
     });
@@ -72,6 +95,7 @@ export function AddBookModal({ isOpen, onClose }: AddBookModalProps) {
     setAuthor('');
     setPageCount('');
     setDescription('');
+    setCoverImageUrl('');
     onClose();
   };
 
