@@ -1,15 +1,19 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, BookOpen, Clock, CheckCircle2, ChevronRight, MessageSquarePlus, X } from 'lucide-react';
+import { Plus, BookOpen, Clock, CheckCircle2, ChevronRight, MessageSquarePlus, X, Trash2, Edit3, Save } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { AddBookModal } from '../components/AddBookModal';
 import { Book } from '../types';
 
 export function Library() {
-  const { books, updateBookStatus, updateBook, addNote } = useAppContext();
+  const { books, updateBookStatus, updateBook, deleteBook, addNote } = useAppContext();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [noteContent, setNoteContent] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editAuthor, setEditAuthor] = useState('');
+  const [editDescription, setEditDescription] = useState('');
 
   const statusMap = {
     'want-to-read': { label: 'Okunacak', icon: Clock, color: 'text-amber-500' },
@@ -144,18 +148,73 @@ export function Library() {
                 </div>
 
                 <div className="w-full md:w-2/3 p-8 flex flex-col relative">
-                  <button 
-                    onClick={() => setSelectedBook(null)}
-                    className="absolute top-6 right-6 p-2 text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 hidden md:block rounded-full hover:bg-stone-100 dark:hover:bg-white/5 transition-colors"
-                  >
-                    <X size={20} />
-                  </button>
+                  <div className="absolute top-6 right-6 flex gap-2">
+                    <button 
+                      onClick={() => {
+                        if (isEditing) {
+                          updateBook(selectedBook.id, {
+                            title: editTitle,
+                            author: editAuthor,
+                            description: editDescription
+                          });
+                          setSelectedBook({ ...selectedBook, title: editTitle, author: editAuthor, description: editDescription });
+                          setIsEditing(false);
+                        } else {
+                          setEditTitle(selectedBook.title);
+                          setEditAuthor(selectedBook.author);
+                          setEditDescription(selectedBook.description || '');
+                          setIsEditing(true);
+                        }
+                      }}
+                      className="p-2 text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 hidden md:flex items-center gap-1 rounded-full hover:bg-stone-100 dark:hover:bg-white/5 transition-colors"
+                      title={isEditing ? "Kaydet" : "Düzenle"}
+                    >
+                      {isEditing ? <Save size={20} /> : <Edit3 size={20} />}
+                    </button>
+                    <button 
+                      onClick={() => {
+                        if (window.confirm("Bu kitabı kütüphaneden silmek istediğinize emin misiniz?")) {
+                          deleteBook(selectedBook.id);
+                          setSelectedBook(null);
+                        }
+                      }}
+                      className="p-2 text-stone-400 hover:text-red-500 dark:hover:text-red-400 hidden md:block rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                      title="Sil"
+                    >
+                      <Trash2 size={20} />
+                    </button>
+                    <button 
+                      onClick={() => setSelectedBook(null)}
+                      className="p-2 text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 hidden md:block rounded-full hover:bg-stone-100 dark:hover:bg-white/5 transition-colors"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
 
-                  <h2 className="text-3xl font-serif font-semibold text-stone-900 dark:text-stone-100 mb-2 pr-8">{selectedBook.title}</h2>
-                  <p className="text-lg text-stone-500 dark:text-stone-400 mb-6">{selectedBook.author}</p>
+                  {isEditing ? (
+                    <div className="mb-6 pr-24">
+                      <input 
+                        type="text" 
+                        value={editTitle} 
+                        onChange={e => setEditTitle(e.target.value)} 
+                        className="text-3xl font-serif font-semibold text-stone-900 dark:text-stone-100 mb-2 w-full bg-transparent border-b border-stone-300 dark:border-stone-700 focus:outline-none focus:border-stone-500"
+                      />
+                      <input 
+                        type="text" 
+                        value={editAuthor} 
+                        onChange={e => setEditAuthor(e.target.value)} 
+                        className="text-lg text-stone-500 dark:text-stone-400 w-full bg-transparent border-b border-stone-300 dark:border-stone-700 focus:outline-none focus:border-stone-500"
+                      />
+                    </div>
+                  ) : (
+                    <>
+                      <h2 className="text-3xl font-serif font-semibold text-stone-900 dark:text-stone-100 mb-2 pr-24">{selectedBook.title}</h2>
+                      <p className="text-lg text-stone-500 dark:text-stone-400 mb-6">{selectedBook.author}</p>
+                    </>
+                  )}
                   
                   {/* Auto Fetch Info Button */}
-                  {(!selectedBook.coverImageUrl || !selectedBook.description || !selectedBook.pageCount) && (
+                  {!isEditing && (!selectedBook.coverImageUrl || !selectedBook.description || !selectedBook.pageCount) && (
                     <button
                       onClick={async () => {
                         try {
@@ -198,7 +257,18 @@ export function Library() {
                     </button>
                   )}
 
-                  {selectedBook.description && (
+                  {isEditing ? (
+                    <div className="mb-8">
+                      <p className="text-xs font-medium text-stone-400 dark:text-stone-500 uppercase tracking-wider mb-2">Açıklama</p>
+                      <textarea 
+                        value={editDescription} 
+                        onChange={e => setEditDescription(e.target.value)} 
+                        rows={5}
+                        className="w-full bg-stone-50 dark:bg-[#0B0C10] border border-stone-200 dark:border-white/10 text-stone-700 dark:text-stone-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-stone-500 resize-none"
+                        placeholder="Kitap hakkında açıklama..."
+                      />
+                    </div>
+                  ) : selectedBook.description && (
                     <div className="mb-8">
                       <p className="text-xs font-medium text-stone-400 dark:text-stone-500 uppercase tracking-wider mb-2">Açıklama</p>
                       <p className="text-sm text-stone-600 dark:text-stone-400 line-clamp-4 leading-relaxed">{selectedBook.description}</p>

@@ -19,6 +19,7 @@ interface AppContextType {
   toggleFavoriteNote: (id: string) => void;
   updateBookStatus: (id: string, status: Book['status']) => void;
   updateBook: (id: string, updates: Partial<Book>) => void;
+  deleteBook: (id: string) => void;
 }
 
 const defaultStats: ReadingStat[] = [
@@ -194,6 +195,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const deleteBook = async (id: string) => {
+    const { deleteDoc } = await import('firebase/firestore');
+    const bookRef = doc(db, 'books', id);
+    try {
+      await deleteDoc(bookRef);
+    } catch (error) {
+      console.error("Kitap silinirken hata oluştu: ", error);
+    }
+  };
+
   return (
     <AppContext.Provider value={{
       books,
@@ -208,7 +219,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       toggleFavoriteBook,
       toggleFavoriteNote,
       updateBookStatus,
-      updateBook
+      updateBook,
+      deleteBook
     }}>
       {children}
     </AppContext.Provider>
