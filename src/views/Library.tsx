@@ -6,7 +6,7 @@ import { AddBookModal } from '../components/AddBookModal';
 import { Book } from '../types';
 
 export function Library() {
-  const { books, updateBookStatus, addNote } = useAppContext();
+  const { books, updateBookStatus, updateBook, addNote } = useAppContext();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [noteContent, setNoteContent] = useState('');
@@ -154,6 +154,50 @@ export function Library() {
                   <h2 className="text-3xl font-serif font-semibold text-stone-900 dark:text-stone-100 mb-2 pr-8">{selectedBook.title}</h2>
                   <p className="text-lg text-stone-500 dark:text-stone-400 mb-6">{selectedBook.author}</p>
                   
+                  {/* Auto Fetch Info Button */}
+                  {(!selectedBook.coverImageUrl || !selectedBook.description || !selectedBook.pageCount) && (
+                    <button
+                      onClick={async () => {
+                        try {
+                          const query = `${selectedBook.title} ${selectedBook.author}`;
+                          const response = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=1`);
+                          if (response.ok) {
+                            const data = await response.json();
+                            if (data.docs && data.docs.length > 0) {
+                              const doc = data.docs[0];
+                              const updates: Partial<Book> = {};
+                              if (!selectedBook.coverImageUrl && doc.cover_i) {
+                                updates.coverImageUrl = `https://covers.openlibrary.org/b/id/${doc.cover_i}-M.jpg`;
+                              }
+                              if (!selectedBook.pageCount && doc.number_of_pages_median) {
+                                updates.pageCount = doc.number_of_pages_median;
+                              }
+                              if (!selectedBook.description && doc.first_publish_year) {
+                                updates.description = `İlk basım yılı: ${doc.first_publish_year}`;
+                              }
+                              
+                              if (Object.keys(updates).length > 0) {
+                                updateBook(selectedBook.id, updates);
+                                setSelectedBook({ ...selectedBook, ...updates });
+                              } else {
+                                alert("Ek bilgi bulunamadı.");
+                              }
+                            } else {
+                              alert("İnternette bu kitaba ait ek bilgi bulunamadı.");
+                            }
+                          }
+                        } catch (error) {
+                          console.error("Bilgi getirilirken hata:", error);
+                          alert("Bilgi getirilemedi, lütfen internet bağlantınızı kontrol edin.");
+                        }
+                      }}
+                      className="mb-6 flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 font-medium hover:underline w-fit"
+                    >
+                      <BookOpen size={16} />
+                      Kapak ve Bilgileri İnternetten Bul
+                    </button>
+                  )}
+
                   {selectedBook.description && (
                     <div className="mb-8">
                       <p className="text-xs font-medium text-stone-400 dark:text-stone-500 uppercase tracking-wider mb-2">Açıklama</p>

@@ -18,6 +18,7 @@ interface AppContextType {
   toggleFavoriteBook: (id: string) => void;
   toggleFavoriteNote: (id: string) => void;
   updateBookStatus: (id: string, status: Book['status']) => void;
+  updateBook: (id: string, updates: Partial<Book>) => void;
 }
 
 const defaultStats: ReadingStat[] = [
@@ -184,6 +185,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const updateBook = async (id: string, updates: Partial<Book>) => {
+    const bookRef = doc(db, 'books', id);
+    try {
+      await updateDoc(bookRef, updates);
+    } catch (error) {
+      console.error("Kitap bilgileri güncellenirken hata oluştu: ", error);
+    }
+  };
+
   return (
     <AppContext.Provider value={{
       books,
@@ -197,7 +207,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       addNote,
       toggleFavoriteBook,
       toggleFavoriteNote,
-      updateBookStatus
+      updateBookStatus,
+      updateBook
     }}>
       {children}
     </AppContext.Provider>
