@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search, X, Loader2, Plus, BookOpen } from 'lucide-react';
-import { useGoogleBooks, GoogleBookVolume } from '../hooks/useGoogleBooks';
+import { useGoogleBooks, BookSearchResult } from '../hooks/useGoogleBooks';
 import { useAppContext } from '../context/AppContext';
 
 interface AddBookModalProps {
@@ -11,10 +11,10 @@ interface AddBookModalProps {
 
 export function AddBookModal({ isOpen, onClose }: AddBookModalProps) {
   const [query, setQuery] = useState('');
-  const { results, loading } = useGoogleBooks(query);
+  const { results, loading, error } = useGoogleBooks(query);
   const { addBook } = useAppContext();
 
-  const handleAddBook = (volume: GoogleBookVolume) => {
+  const handleAddBook = (volume: BookSearchResult) => {
     const info = volume.volumeInfo;
     const colors = ['bg-red-800', 'bg-blue-800', 'bg-emerald-800', 'bg-amber-800', 'bg-purple-800', 'bg-stone-800'];
     const randomColor = colors[Math.floor(Math.random() * colors.length)];
@@ -76,7 +76,13 @@ export function AddBookModal({ isOpen, onClose }: AddBookModalProps) {
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-stone-50/50 dark:bg-[#0B0C10]/50">
-              {query && results.length === 0 && !loading && (
+              {error && (
+                <div className="p-4 text-red-500 bg-red-50 dark:bg-red-500/10 rounded-xl mb-4">
+                  Arama hatası: {error}
+                </div>
+              )}
+
+              {query && results.length === 0 && !loading && !error && (
                 <div className="py-12 text-center text-stone-500 dark:text-stone-400">
                   Sonuç bulunamadı.
                 </div>
