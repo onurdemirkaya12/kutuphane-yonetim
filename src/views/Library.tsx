@@ -36,15 +36,11 @@ export function Library() {
   const exportToCSV = () => {
     // UTF-8 BOM ekliyoruz ki Excel Türkçe karakterleri (ş,ğ,ü vb.) sorunsuz okusun
     const bom = '\uFEFF';
-    const headers = ['Kitap Adı', 'Yazar', 'Durum', 'Sayfa Sayısı', 'ISBN', 'Eklenme Tarihi'];
+    const headers = ['ISBN Numarası', 'Kitap Adı'];
     
     const rows = books.map(book => [
-      `"${book.title.replace(/"/g, '""')}"`,
-      `"${book.author.replace(/"/g, '""')}"`,
-      `"${statusMap[book.status].label}"`,
-      book.pageCount || '',
       `"${book.isbn || ''}"`,
-      `"${new Date(book.addedAt).toLocaleDateString('tr-TR')}"`
+      `"${book.title.replace(/"/g, '""')}"`
     ]);
 
     const csvContent = bom + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
@@ -52,7 +48,7 @@ export function Library() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `kutuphanem_${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `kutuphanem_isbn_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
     URL.revokeObjectURL(url);
   };
