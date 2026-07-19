@@ -66,12 +66,19 @@ export function Library() {
               >
                 <div className="relative aspect-[2/3] rounded-xl shadow-md overflow-hidden mb-4 bg-stone-200 dark:bg-stone-800">
                   {book.coverImageUrl ? (
-                    <img src={book.coverImageUrl} alt={book.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                  ) : (
-                    <div className={`w-full h-full ${book.coverColor || 'bg-stone-800'} flex items-center justify-center p-4 text-center`}>
-                      <span className="font-serif font-medium text-white/50 text-sm">{book.title}</span>
-                    </div>
-                  )}
+                    <img 
+                      src={book.coverImageUrl} 
+                      alt={book.title} 
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                        (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                      }}
+                    />
+                  ) : null}
+                  <div className={`w-full h-full ${book.coverColor || 'bg-stone-800'} flex items-center justify-center p-4 text-center ${book.coverImageUrl ? 'hidden' : ''}`}>
+                    <span className="font-serif font-medium text-white/50 text-sm">{book.title}</span>
+                  </div>
                   
                   {/* Hover Overlay */}
                   <div className="absolute inset-0 bg-stone-900/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center backdrop-blur-sm">
@@ -129,10 +136,17 @@ export function Library() {
                   </button>
                   <div className="w-40 aspect-[2/3] rounded-lg shadow-xl overflow-hidden mb-6">
                     {selectedBook.coverImageUrl ? (
-                      <img src={selectedBook.coverImageUrl} alt={selectedBook.title} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className={`w-full h-full ${selectedBook.coverColor || 'bg-stone-800'}`} />
-                    )}
+                    <img 
+                      src={selectedBook.coverImageUrl} 
+                      alt={selectedBook.title} 
+                      className="w-full h-full object-cover" 
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                        (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                      }}
+                    />
+                  ) : null}
+                  <div className={`w-full h-full ${selectedBook.coverColor || 'bg-stone-800'} ${selectedBook.coverImageUrl ? 'hidden' : ''}`} />
                   </div>
                   <div className="w-full space-y-2">
                     <p className="text-xs font-medium text-stone-400 dark:text-stone-500 uppercase tracking-wider">Durum</p>
