@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, BookOpen, Clock, CheckCircle2, ChevronRight, MessageSquarePlus, X, Trash2, Edit3, Save, Search, Download } from 'lucide-react';
+import { Plus, BookOpen, Clock, CheckCircle2, ChevronRight, MessageSquarePlus, X, Trash2, Edit3, Save, Search, Download, Wand2, Loader2 } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { AddBookModal } from '../components/AddBookModal';
 import { Book } from '../types';
@@ -17,9 +17,18 @@ export function Library() {
   const [editDescription, setEditDescription] = useState('');
   const [editCoverUrl, setEditCoverUrl] = useState('');
   const [editIsbn, setEditIsbn] = useState('');
+  const [editCategory, setEditCategory] = useState('');
+  const [editRating, setEditRating] = useState<number | ''>('');
+  const [editEmotion, setEditEmotion] = useState('');
   
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | Book['status']>('all');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  
+  const [isAutoFetching, setIsAutoFetching] = useState(false);
+  const [autoFetchProgress, setAutoFetchProgress] = useState({ current: 0, total: 0 });
+
+  const uniqueCategories = Array.from(new Set(books.map(b => b.category).filter(Boolean))) as string[];
 
   const statusMap = {
     'want-to-read': { label: 'Okunacak', icon: Clock, color: 'text-amber-500' },
@@ -31,20 +40,24 @@ export function Library() {
     const matchesSearch = book.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           book.author.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || book.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const matchesCategory = categoryFilter === 'all' || book.category === categoryFilter;
+    return matchesSearch && matchesStatus && matchesCategory;
   });
 
   const exportToCSV = () => {
     // UTF-8 BOM ekliyoruz ki Excel Türkçe karakterleri (ş,ğ,ü vb.) sorunsuz okusun
     const bom = '\uFEFF';
-    const headers = ['ISBN Numarası', 'Kitap Adı'];
+    // Türkçe Windows ve Excel varsayılan olarak noktalı virgül (;) ayırıcısını kullanır
+    const headers = ['ISBN Numarası', 'Kitap Adı', 'Yazar'];
     
     const rows = books.map(book => [
       `"${book.isbn || ''}"`,
-      `"${book.title.replace(/"/g, '""')}"`
+      `"${book.title.replace(/"/g, '""')}"`,
+      `"${book.author.replace(/"/g, '""')}"`
     ]);
 
-    const csvContent = bom + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    // Bütün alanları noktalı virgül ile birleştiriyoruz
+    const csvContent = bom + [headers.join(';'), ...rows.map(r => r.join(';'))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -52,6 +65,96 @@ export function Library() {
     link.download = `kutuphanem_isbn_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
     URL.revokeObjectURL(url);
+  };
+
+  const autoFetchMissingCategories = async () => {
+    const booksWithoutCategory = books.filter(b => !b.category);
+    if (booksWithoutCategory.length === 0) {
+      alert("Tüm kitapların zaten bir kategorisi var.");
+      return;
+    }
+
+    if (!window.confirm(`Kategorisi olmayan ${booksWithoutCategory.length} kitap bulundu. Bunlar için otomatik olarak Google Books ve Open Library üzerinden kategori aranacak. Devam etmek istiyor musunuz?`)) {
+        return;
+    }
+
+    setIsAutoFetching(true);
+    setAutoFetchProgress({ current: 0, total: booksWithoutCategory.length });
+
+    let updatedCount = 0;
+
+    const findCategory = async (query: string, isIsbn = false) => {
+      try {
+        // 1. Google Books API
+        const gbQuery = isIsbn ? `isbn:${query}` : encodeURIComponent(query);
+        const gbResponse = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${gbQuery}&maxResults=5`);
+        if (gbResponse.ok) {
+          const gbData = await gbResponse.json();
+          if (gbData.items) {
+            for (const item of gbData.items) {
+              if (item.volumeInfo?.categories && item.volumeInfo.categories.length > 0) {
+                return item.volumeInfo.categories.join(', ');
+              }
+            }
+          }
+        }
+
+        // 2. Open Library API
+        const olQuery = isIsbn ? `isbn=${query}` : `q=${encodeURIComponent(query)}&limit=5`;
+        const olResponse = await fetch(`https://openlibrary.org/search.json?${olQuery}`);
+        if (olResponse.ok) {
+          const olData = await olResponse.json();
+          if (olData.docs) {
+            for (const doc of olData.docs) {
+              if (doc.subject && doc.subject.length > 0) {
+                // Return up to 2 subjects from Open Library as they can be very long
+                return doc.subject.slice(0, 2).join(', ');
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Error fetching for", query, e);
+      }
+      return null;
+    };
+
+    for (let i = 0; i < booksWithoutCategory.length; i++) {
+      const book = booksWithoutCategory[i];
+      try {
+        let categoryToUpdate = null;
+        
+        // Try with ISBN if available
+        if (book.isbn) {
+            const cleanIsbn = book.isbn.replace(/[- ]/g, '');
+            categoryToUpdate = await findCategory(cleanIsbn, true);
+        } 
+        
+        // Try with Title + Author
+        if (!categoryToUpdate) {
+            categoryToUpdate = await findCategory(`${book.title} ${book.author}`);
+        }
+
+        // Try with just Title as a last resort
+        if (!categoryToUpdate) {
+            categoryToUpdate = await findCategory(book.title);
+        }
+
+        if (categoryToUpdate) {
+          updateBook(book.id, { category: categoryToUpdate });
+          updatedCount++;
+        }
+      } catch (error) {
+        console.error(`Error processing ${book.title}:`, error);
+      }
+      
+      setAutoFetchProgress({ current: i + 1, total: booksWithoutCategory.length });
+      // Add a larger delay (1000ms) to respect free API rate limits (Google Books & Open Library)
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
+    setIsAutoFetching(false);
+    alert(`${booksWithoutCategory.length} kitaptan ${updatedCount} tanesinin kategorisi otomatik olarak bulundu ve güncellendi.`);
   };
 
   const handleAddNote = (e: React.FormEvent) => {
@@ -78,6 +181,17 @@ export function Library() {
             <span className="hidden sm:inline">İndir</span>
           </button>
           <button
+            onClick={autoFetchMissingCategories}
+            disabled={isAutoFetching}
+            className="anti-gravity flex items-center gap-2 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-4 py-3 rounded-xl font-medium hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors disabled:opacity-50"
+            title="Eksik Kategorileri Otomatik Bul"
+          >
+            {isAutoFetching ? <Loader2 size={20} className="animate-spin" /> : <Wand2 size={20} />}
+            <span className="hidden sm:inline">
+              {isAutoFetching ? `${autoFetchProgress.current}/${autoFetchProgress.total} Bulunuyor...` : 'Otomatik Kategori Bul'}
+            </span>
+          </button>
+          <button
             onClick={() => setIsAddModalOpen(true)}
             className="anti-gravity flex items-center gap-2 bg-stone-900 dark:bg-stone-100 text-stone-50 dark:text-stone-900 px-6 py-3 rounded-xl font-medium hover:bg-stone-800 dark:hover:bg-white transition-colors"
           >
@@ -102,11 +216,21 @@ export function Library() {
           />
         </div>
         <select
+          value={categoryFilter}
+          onChange={(e) => setCategoryFilter(e.target.value)}
+          className="px-4 py-3 bg-white dark:bg-[#1A1E29] border border-stone-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-500 dark:text-stone-200 cursor-pointer appearance-none min-w-[160px]"
+        >
+          <option value="all">Tüm Kategoriler</option>
+          {uniqueCategories.map(cat => (
+            <option key={cat} value={cat}>{cat}</option>
+          ))}
+        </select>
+        <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as any)}
           className="px-4 py-3 bg-white dark:bg-[#1A1E29] border border-stone-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-500 dark:text-stone-200 cursor-pointer appearance-none min-w-[160px]"
         >
-          <option value="all">Tüm Kitaplar</option>
+          <option value="all">Tüm Durumlar</option>
           <option value="want-to-read">Okunacaklar</option>
           <option value="reading">Okunanlar</option>
           <option value="completed">Bitenler</option>
@@ -243,6 +367,12 @@ export function Library() {
                           };
                           if (editCoverUrl) updates.coverImageUrl = editCoverUrl;
                           if (editIsbn) updates.isbn = editIsbn;
+                          if (editCategory) updates.category = editCategory;
+                          
+                          if (selectedBook.status === 'completed') {
+                            if (editRating !== '') updates.rating = Number(editRating);
+                            if (editEmotion) updates.emotion = editEmotion;
+                          }
                           
                           updateBook(selectedBook.id, updates);
                           setSelectedBook({ ...selectedBook, ...updates });
@@ -253,6 +383,9 @@ export function Library() {
                           setEditDescription(selectedBook.description || '');
                           setEditCoverUrl(selectedBook.coverImageUrl || '');
                           setEditIsbn(selectedBook.isbn || '');
+                          setEditCategory(selectedBook.category || '');
+                          setEditRating(selectedBook.rating || '');
+                          setEditEmotion(selectedBook.emotion || '');
                           setIsEditing(true);
                         }
                       }}
@@ -294,8 +427,15 @@ export function Library() {
                         type="text" 
                         value={editAuthor} 
                         onChange={e => setEditAuthor(e.target.value)} 
-                        className="text-lg text-stone-500 dark:text-stone-400 mb-4 w-full bg-transparent border-b border-stone-300 dark:border-stone-700 focus:outline-none focus:border-stone-500"
+                        className="text-lg text-stone-500 dark:text-stone-400 mb-2 w-full bg-transparent border-b border-stone-300 dark:border-stone-700 focus:outline-none focus:border-stone-500"
                         placeholder="Yazar"
+                      />
+                      <input 
+                        type="text" 
+                        value={editCategory} 
+                        onChange={e => setEditCategory(e.target.value)} 
+                        className="text-sm text-stone-600 dark:text-stone-400 mb-4 w-full bg-transparent border-b border-stone-300 dark:border-stone-700 focus:outline-none focus:border-stone-500"
+                        placeholder="Kategori (Örn: Roman, Psikoloji)"
                       />
                       <label className="block text-xs font-medium text-stone-400 dark:text-stone-500 uppercase tracking-wider mb-1 mt-4">Kapak Görseli URL</label>
                       <input 
@@ -314,11 +454,65 @@ export function Library() {
                         className="text-sm text-stone-600 dark:text-stone-300 w-full bg-transparent border-b border-stone-300 dark:border-stone-700 focus:outline-none focus:border-stone-500 pb-1"
                         placeholder="Örn: 9780140449136"
                       />
+
+                      {selectedBook.status === 'completed' && (
+                        <div className="flex gap-4 mt-4">
+                          <div className="flex-1">
+                            <label className="block text-xs font-medium text-amber-600 dark:text-amber-500 uppercase tracking-wider mb-1">Puanınız (1-10)</label>
+                            <input 
+                              type="number" 
+                              min="1" max="10"
+                              value={editRating} 
+                              onChange={e => setEditRating(e.target.value === '' ? '' : Number(e.target.value))} 
+                              className="text-sm text-stone-600 dark:text-stone-300 w-full bg-transparent border-b border-stone-300 dark:border-stone-700 focus:outline-none focus:border-stone-500 pb-1"
+                              placeholder="Örn: 9"
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <label className="block text-xs font-medium text-emerald-600 dark:text-emerald-500 uppercase tracking-wider mb-1">Duygu Etiketi</label>
+                            <input 
+                              type="text" 
+                              value={editEmotion} 
+                              onChange={e => setEditEmotion(e.target.value)} 
+                              className="text-sm text-stone-600 dark:text-stone-300 w-full bg-transparent border-b border-stone-300 dark:border-stone-700 focus:outline-none focus:border-stone-500 pb-1"
+                              placeholder="Örn: Sarsıcı, İlham Verici"
+                              list="emotionOptions"
+                            />
+                            <datalist id="emotionOptions">
+                              <option value="Sarsıcı" />
+                              <option value="İlham Verici" />
+                              <option value="Hüzünlü" />
+                              <option value="Eğlenceli" />
+                              <option value="Ufuk Açıcı" />
+                              <option value="Sürükleyici" />
+                              <option value="Düşündürücü" />
+                            </datalist>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <>
                       <h2 className="text-3xl font-serif font-semibold text-stone-900 dark:text-stone-100 mb-2 pr-24">{selectedBook.title}</h2>
-                      <p className="text-lg text-stone-500 dark:text-stone-400 mb-6">{selectedBook.author}</p>
+                      <p className="text-lg text-stone-500 dark:text-stone-400 mb-2">{selectedBook.author}</p>
+                      <div className="flex flex-wrap gap-2 mb-6">
+                        {selectedBook.category && (
+                          <span className="inline-block bg-stone-100 dark:bg-white/5 text-stone-600 dark:text-stone-300 px-3 py-1 rounded-full text-xs font-medium border border-stone-200 dark:border-white/10">
+                            {selectedBook.category}
+                          </span>
+                        )}
+                        {selectedBook.status === 'completed' && selectedBook.rating && (
+                          <span className="inline-flex items-center gap-1 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 px-3 py-1 rounded-full text-xs font-medium border border-amber-200 dark:border-amber-900/50">
+                            ⭐ {selectedBook.rating}/10
+                          </span>
+                        )}
+                        {selectedBook.status === 'completed' && selectedBook.emotion && (
+                          <span className="inline-block bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 px-3 py-1 rounded-full text-xs font-medium border border-emerald-200 dark:border-emerald-900/50">
+                            {selectedBook.emotion}
+                          </span>
+                        )}
+                      </div>
+                      {!selectedBook.category && !selectedBook.rating && !selectedBook.emotion && <div className="mb-6" />}
                     </>
                   )}
                   
@@ -346,6 +540,9 @@ export function Library() {
                               if (!selectedBook.description && volumeInfo.description) {
                                 updates.description = volumeInfo.description;
                               }
+                              if (!selectedBook.category && volumeInfo.categories && volumeInfo.categories.length > 0) {
+                                updates.category = volumeInfo.categories.join(', ');
+                              }
                               foundUpdates = true;
                             }
                           }
@@ -365,6 +562,9 @@ export function Library() {
                                 }
                                 if (!selectedBook.description && !updates.description && doc.first_publish_year) {
                                   updates.description = `İlk basım yılı: ${doc.first_publish_year}`;
+                                }
+                                if (!selectedBook.category && !updates.category && doc.subject && doc.subject.length > 0) {
+                                  updates.category = doc.subject[0];
                                 }
                               }
                             }

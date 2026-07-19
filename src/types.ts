@@ -12,7 +12,12 @@ export interface Book {
   pageCount?: number;
   readPages?: number; // For the progress bar of currently reading books
   description?: string;
+  category?: string;
   addedAt?: number;
+  startDate?: number;
+  endDate?: number;
+  rating?: number; // 1-10
+  emotion?: string; // Emotion tag (e.g., "Sarsıcı", "İlham Verici")
 }
 
 export interface Note {
@@ -21,6 +26,7 @@ export interface Note {
   isFavoriteQuote: boolean;
   createdAt: number;
   bookId?: string; // Optional for backward compatibility, but required for new notes
+  pageNumber?: number;
 }
 
 export interface ReadingStat {

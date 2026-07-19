@@ -18,6 +18,7 @@ export function AddBookModal({ isOpen, onClose }: AddBookModalProps) {
   const [pageCount, setPageCount] = useState('');
   const [description, setDescription] = useState('');
   const [coverImageUrl, setCoverImageUrl] = useState('');
+  const [category, setCategory] = useState('');
   const [isSearchingIsbn, setIsSearchingIsbn] = useState(false);
 
   const handleIsbnSearch = async () => {
@@ -36,6 +37,7 @@ export function AddBookModal({ isOpen, onClose }: AddBookModalProps) {
           setAuthor(volumeInfo.authors ? volumeInfo.authors.join(', ') : '');
           if (volumeInfo.pageCount) setPageCount(volumeInfo.pageCount.toString());
           if (volumeInfo.description) setDescription(volumeInfo.description);
+          if (volumeInfo.categories && volumeInfo.categories.length > 0) setCategory(volumeInfo.categories.join(', '));
           if (volumeInfo.imageLinks?.thumbnail) {
             setCoverImageUrl(volumeInfo.imageLinks.thumbnail.replace('http:', 'https:'));
           }
@@ -54,6 +56,7 @@ export function AddBookModal({ isOpen, onClose }: AddBookModalProps) {
           setAuthor(doc.author_name ? doc.author_name.join(', ') : '');
           if (doc.number_of_pages_median) setPageCount(doc.number_of_pages_median.toString());
           if (doc.first_publish_year && !description) setDescription(`İlk basım yılı: ${doc.first_publish_year}`);
+          if (doc.subject && doc.subject.length > 0) setCategory(doc.subject[0]);
           if (doc.cover_i) {
             setCoverImageUrl(`https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg`);
           }
@@ -90,6 +93,7 @@ export function AddBookModal({ isOpen, onClose }: AddBookModalProps) {
 
     if (pageCount) bookPayload.pageCount = parseInt(pageCount, 10);
     if (description.trim()) bookPayload.description = description.trim();
+    if (category.trim()) bookPayload.category = category.trim();
     if (coverImageUrl) bookPayload.coverImageUrl = coverImageUrl;
     if (isbn.trim()) bookPayload.isbn = isbn.trim().replace(/[- ]/g, '');
 
@@ -101,6 +105,7 @@ export function AddBookModal({ isOpen, onClose }: AddBookModalProps) {
     setAuthor('');
     setPageCount('');
     setDescription('');
+    setCategory('');
     setCoverImageUrl('');
     onClose();
   };
@@ -182,6 +187,17 @@ export function AddBookModal({ isOpen, onClose }: AddBookModalProps) {
                     onChange={(e) => setAuthor(e.target.value)}
                     className="w-full px-4 py-3 bg-stone-50 dark:bg-[#0B0C10] border border-stone-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-500 dark:text-stone-200 transition-shadow"
                     placeholder="Örn: Dostoyevski"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1">Kategori (İsteğe Bağlı)</label>
+                  <input
+                    type="text"
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="w-full px-4 py-3 bg-stone-50 dark:bg-[#0B0C10] border border-stone-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-500 dark:text-stone-200 transition-shadow"
+                    placeholder="Örn: Edebiyat, Psikoloji"
                   />
                 </div>
 

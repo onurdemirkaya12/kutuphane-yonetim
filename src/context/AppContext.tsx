@@ -14,12 +14,14 @@ interface AppContextType {
   toggleTheme: () => void;
   addBook: (book: Omit<Book, 'id'>) => void;
   addBooksBulk: (booksText: string) => void;
-  addNote: (content: string, bookId?: string) => void;
+  addNote: (content: string, bookId?: string, pageNumber?: number) => void;
   toggleFavoriteBook: (id: string) => void;
   toggleFavoriteNote: (id: string) => void;
   updateBookStatus: (id: string, status: Book['status']) => void;
   updateBook: (id: string, updates: Partial<Book>) => void;
   deleteBook: (id: string) => void;
+  updateNote: (id: string, content: string) => void;
+  deleteNote: (id: string) => void;
 }
 
 const defaultStats: ReadingStat[] = [
@@ -134,14 +136,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const addNote = async (content: string, bookId?: string) => {
+  const addNote = async (content: string, bookId?: string, pageNumber?: number) => {
     try {
-      await addDoc(collection(db, 'notes'), {
+      const noteData: any = {
         content,
         isFavoriteQuote: false,
         createdAt: Date.now(),
-        ...(bookId && { bookId })
-      });
+      };
+      if (bookId) noteData.bookId = bookId;
+      if (pageNumber !== undefined) noteData.pageNumber = pageNumber;
+
+      await addDoc(collection(db, 'notes'), noteData);
     } catch (error) {
       console.error("Not eklenirken hata oluştu: ", error);
     }
@@ -178,9 +183,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const updateBookStatus = async (id: string, status: Book['status']) => {
     const bookRef = doc(db, 'books', id);
     try {
-      await updateDoc(bookRef, {
-        status
-      });
+      const updates: Partial<Book> = { status };
+      
+      if (status === 'reading') {
+        updates.startDate = Date.now();
+      } else if (status === 'completed') {
+        updates.endDate = Date.now();
+      }
+
+      await updateDoc(bookRef, updates);
     } catch (error) {
       console.error("Kitap durumu güncellenirken hata oluştu: ", error);
     }
@@ -205,6 +216,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const updateNote = async (id: string, content: string) => {
+    const noteRef = doc(db, 'notes', id);
+    try {
+      await updateDoc(noteRef, { content });
+    } catch (error) {
+      console.error("Not güncellenirken hata oluştu: ", error);
+    }
+  };
+
+  const deleteNote = async (id: string) => {
+    const { deleteDoc } = await import('firebase/firestore');
+    const noteRef = doc(db, 'notes', id);
+    try {
+      await deleteDoc(noteRef);
+    } catch (error) {
+      console.error("Not silinirken hata oluştu: ", error);
+    }
+  };
+
   return (
     <AppContext.Provider value={{
       books,
@@ -220,7 +250,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       toggleFavoriteNote,
       updateBookStatus,
       updateBook,
-      deleteBook
+      deleteBook,
+      updateNote,
+      deleteNote
     }}>
       {children}
     </AppContext.Provider>
