@@ -17,22 +17,27 @@ export function useGoogleBooks(query: string) {
   const [results, setResults] = useState<BookSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasSearched, setHasSearched] = useState(false);
 
   useEffect(() => {
     if (!query || query.trim() === '') {
       setResults([]);
+      setHasSearched(false);
       return;
     }
 
+    setHasSearched(false); // Reset while typing
+    
     const timer = setTimeout(async () => {
       setLoading(true);
       setError(null);
       try {
-        // We use Open Library API because Google Books API without a key often hits 429 Quota Exceeded limits.
-        const response = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=8`);
+        console.log("Arama yapılıyor:", query);
+        const response = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=10`);
         if (!response.ok) throw new Error('Arama başarısız oldu');
         
         const data = await response.json();
+        console.log("Gelen veri:", data);
         
         const formattedResults = (data.docs || []).map((doc: any) => ({
           id: doc.key,
@@ -49,15 +54,17 @@ export function useGoogleBooks(query: string) {
         
         setResults(formattedResults);
       } catch (err) {
+        console.error("Hata oluştu:", err);
         setError(err instanceof Error ? err.message : 'Bilinmeyen hata');
         setResults([]);
       } finally {
         setLoading(false);
+        setHasSearched(true);
       }
-    }, 500);
+    }, 700);
 
     return () => clearTimeout(timer);
   }, [query]);
 
-  return { results, loading, error };
+  return { results, loading, error, hasSearched };
 }

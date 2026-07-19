@@ -11,7 +11,7 @@ interface AddBookModalProps {
 
 export function AddBookModal({ isOpen, onClose }: AddBookModalProps) {
   const [query, setQuery] = useState('');
-  const { results, loading, error } = useGoogleBooks(query);
+  const { results, loading, error, hasSearched } = useGoogleBooks(query);
   const { addBook } = useAppContext();
 
   const handleAddBook = (volume: BookSearchResult) => {
@@ -82,7 +82,7 @@ export function AddBookModal({ isOpen, onClose }: AddBookModalProps) {
                 </div>
               )}
 
-              {query && results.length === 0 && !loading && !error && (
+              {query && hasSearched && results.length === 0 && !loading && !error && (
                 <div className="py-12 text-center text-stone-500 dark:text-stone-400">
                   Sonuç bulunamadı.
                 </div>
