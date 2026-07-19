@@ -3,14 +3,18 @@ import { collection, onSnapshot, addDoc, doc, updateDoc } from 'firebase/firesto
 import { db } from '../lib/firebase';
 import { Book, Note, ReadingStat } from '../types';
 
+export type Theme = 'light' | 'dark';
+
 interface AppContextType {
   books: Book[];
   notes: Note[];
   stats: ReadingStat[];
   discoverBooks: Book[];
+  theme: Theme;
+  toggleTheme: () => void;
   addBook: (book: Omit<Book, 'id'>) => void;
   addBooksBulk: (booksText: string) => void;
-  addNote: (content: string) => void;
+  addNote: (content: string, bookId?: string) => void;
   toggleFavoriteBook: (id: string) => void;
   toggleFavoriteNote: (id: string) => void;
   updateBookStatus: (id: string, status: Book['status']) => void;
@@ -37,6 +41,32 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export function AppProvider({ children }: { children: ReactNode }) {
   const [books, setBooks] = useState<Book[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
+  const [theme, setTheme] = useState<Theme>('light');
+
+  // Theme logic
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme') as Theme | null;
+    if (savedTheme) {
+      setTheme(savedTheme);
+      if (savedTheme === 'dark') document.documentElement.classList.add('dark');
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      setTheme('dark');
+      document.documentElement.classList.add('dark');
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    setTheme(prev => {
+      const newTheme = prev === 'light' ? 'dark' : 'light';
+      localStorage.setItem('theme', newTheme);
+      if (newTheme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+      return newTheme;
+    });
+  };
 
   // Firebase Realtime Listeners
   useEffect(() => {
@@ -102,12 +132,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const addNote = async (content: string) => {
+  const addNote = async (content: string, bookId?: string) => {
     try {
       await addDoc(collection(db, 'notes'), {
         content,
         isFavoriteQuote: false,
-        createdAt: Date.now()
+        createdAt: Date.now(),
+        ...(bookId && { bookId })
       });
     } catch (error) {
       console.error("Not eklenirken hata oluştu: ", error);
@@ -159,6 +190,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       notes,
       stats: defaultStats,
       discoverBooks: mockDiscover,
+      theme,
+      toggleTheme,
       addBook,
       addBooksBulk,
       addNote,

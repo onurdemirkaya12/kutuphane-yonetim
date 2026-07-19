@@ -1,181 +1,191 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Plus, BookOpen, Clock, CheckCircle2, ChevronRight, MessageSquarePlus, X } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
-import { Plus, X, Star } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { AddBookModal } from '../components/AddBookModal';
+import { Book } from '../types';
 
 export function Library() {
-  const { books, addBook, addBooksBulk, toggleFavoriteBook, updateBookStatus } = useAppContext();
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { books, updateBookStatus, addNote } = useAppContext();
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [selectedBook, setSelectedBook] = useState<Book | null>(null);
+  const [noteContent, setNoteContent] = useState('');
+
+  const statusMap = {
+    'want-to-read': { label: 'Okunacak', icon: Clock, color: 'text-amber-500' },
+    'reading': { label: 'Okunuyor', icon: BookOpen, color: 'text-blue-500' },
+    'completed': { label: 'Tamamlandı', icon: CheckCircle2, color: 'text-emerald-500' }
+  };
+
+  const handleAddNote = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!noteContent.trim() || !selectedBook) return;
+    addNote(noteContent, selectedBook.id);
+    setNoteContent('');
+  };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8 pb-20">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-serif font-bold text-stone-800">Kütüphanem</h1>
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          className="bg-stone-800 hover:bg-stone-900 text-white px-5 py-2.5 rounded-xl font-medium text-sm flex items-center transition-colors shadow-sm"
+    <div className="p-8 max-w-7xl mx-auto min-h-full relative">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-10">
+        <div>
+          <h1 className="text-3xl font-serif font-semibold text-stone-900 dark:text-stone-100 mb-2">Kütüphane</h1>
+          <p className="text-stone-500 dark:text-stone-400">Tüm kitaplarınız ve okuma durumlarınız.</p>
+        </div>
+        <button
+          onClick={() => setIsAddModalOpen(true)}
+          className="anti-gravity flex items-center gap-2 bg-stone-900 dark:bg-stone-100 text-stone-50 dark:text-stone-900 px-6 py-3 rounded-xl font-medium hover:bg-stone-800 dark:hover:bg-white transition-colors"
         >
-          <Plus size={18} className="mr-2" />
-          Hızlı Yeni Kitap Ekle
+          <Plus size={20} />
+          Yeni Kitap Ekle
         </button>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
-        {books.map(book => (
-          <div key={book.id} className="group relative">
-            <div className={cn(
-              "aspect-[2/3] w-full rounded-lg shadow-md mb-3 transition-transform group-hover:-translate-y-1",
-              book.coverColor
-            )} />
+      <motion.div 
+        layout
+        className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"
+      >
+        <AnimatePresence>
+          {books.map((book) => {
+            const StatusIcon = statusMap[book.status].icon;
             
-            <button 
-              onClick={() => toggleFavoriteBook(book.id)}
-              className="absolute top-2 right-2 p-1.5 rounded-full bg-black/20 hover:bg-black/40 backdrop-blur-sm transition-colors"
-            >
-              <Star size={16} className={cn(book.isFavorite ? "fill-amber-400 text-amber-400" : "text-white/80")} />
-            </button>
-            
-            <h3 className="font-serif font-medium text-stone-900 leading-tight">{book.title}</h3>
-            <p className="text-xs text-stone-500 mt-1">{book.author}</p>
-            
-            <div className="mt-2">
-              <select 
-                value={book.status}
-                onChange={(e) => updateBookStatus(book.id, e.target.value as any)}
-                className="text-xs bg-stone-100 border-none rounded-md px-2 py-1 text-stone-600 focus:ring-0 cursor-pointer"
+            return (
+              <motion.div
+                layoutId={`book-${book.id}`}
+                key={book.id}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                whileHover={{ y: -8 }}
+                onClick={() => setSelectedBook(book)}
+                className="anti-gravity cursor-pointer group flex flex-col"
               >
-                <option value="want-to-read">Okunacak</option>
-                <option value="reading">Okunuyor</option>
-                <option value="completed">Tamamlandı</option>
-              </select>
-            </div>
-          </div>
-        ))}
-      </div>
+                <div className="relative aspect-[2/3] rounded-xl shadow-md overflow-hidden mb-4 bg-stone-200 dark:bg-stone-800">
+                  {book.coverImageUrl ? (
+                    <img src={book.coverImageUrl} alt={book.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                  ) : (
+                    <div className={`w-full h-full ${book.coverColor || 'bg-stone-800'} flex items-center justify-center p-4 text-center`}>
+                      <span className="font-serif font-medium text-white/50 text-sm">{book.title}</span>
+                    </div>
+                  )}
+                  
+                  {/* Hover Overlay */}
+                  <div className="absolute inset-0 bg-stone-900/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center backdrop-blur-sm">
+                    <span className="text-white font-medium flex items-center gap-2">
+                      Detaylar <ChevronRight size={16} />
+                    </span>
+                  </div>
+                  
+                  {/* Status Badge */}
+                  <div className="absolute top-2 right-2 bg-white/90 dark:bg-stone-900/90 backdrop-blur p-1.5 rounded-lg shadow-sm">
+                    <StatusIcon size={14} className={statusMap[book.status].color} />
+                  </div>
+                </div>
+                
+                <h3 className="font-serif font-semibold text-stone-900 dark:text-stone-100 truncate">{book.title}</h3>
+                <p className="text-stone-500 dark:text-stone-400 text-sm truncate">{book.author}</p>
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
+      </motion.div>
 
-      {isModalOpen && (
-        <AddBookModal onClose={() => setIsModalOpen(false)} onAddSingle={addBook} onAddBulk={addBooksBulk} />
+      {books.length === 0 && (
+        <div className="py-20 text-center flex flex-col items-center justify-center text-stone-400">
+          <BookOpen size={64} className="mb-4 opacity-50" />
+          <p className="text-lg">Kütüphaneniz şu an boş.</p>
+          <p className="text-sm mt-2">Sağ üstteki butona tıklayarak kitap eklemeye başlayabilirsiniz.</p>
+        </div>
       )}
-    </div>
-  );
-}
 
-function AddBookModal({ 
-  onClose, 
-  onAddSingle, 
-  onAddBulk 
-}: { 
-  onClose: () => void, 
-  onAddSingle: (book: any) => void,
-  onAddBulk: (text: string) => void 
-}) {
-  const [tab, setTab] = useState<'single'|'bulk'>('single');
-  
-  // Single State
-  const [title, setTitle] = useState('');
-  const [author, setAuthor] = useState('');
-  
-  // Bulk State
-  const [bulkText, setBulkText] = useState('');
+      <AddBookModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} />
 
-  const handleSingleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim()) return;
-    
-    const colors = ['bg-red-800', 'bg-blue-800', 'bg-emerald-800', 'bg-amber-800', 'bg-purple-800', 'bg-stone-800'];
-    onAddSingle({
-      title,
-      author: author || 'Bilinmeyen Yazar',
-      status: 'want-to-read',
-      isFavorite: false,
-      coverColor: colors[Math.floor(Math.random() * colors.length)]
-    });
-    onClose();
-  };
+      {/* Book Detail Expanded Modal */}
+      <AnimatePresence>
+        {selectedBook && (
+          <React.Fragment>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedBook(null)}
+              className="fixed inset-0 bg-stone-900/40 dark:bg-black/60 backdrop-blur-md z-40"
+            />
+            <div className="fixed inset-0 pointer-events-none z-50 flex items-center justify-center p-4">
+              <motion.div
+                layoutId={`book-${selectedBook.id}`}
+                className="pointer-events-auto w-full max-w-3xl bg-white dark:bg-[#1A1E29] rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row border border-stone-200 dark:border-white/10"
+              >
+                <div className="w-full md:w-1/3 bg-stone-100 dark:bg-[#0B0C10] p-8 flex flex-col items-center justify-center border-r border-stone-200 dark:border-white/5 relative">
+                  <button 
+                    onClick={() => setSelectedBook(null)}
+                    className="absolute top-4 left-4 p-2 text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 md:hidden"
+                  >
+                    <X size={20} />
+                  </button>
+                  <div className="w-40 aspect-[2/3] rounded-lg shadow-xl overflow-hidden mb-6">
+                    {selectedBook.coverImageUrl ? (
+                      <img src={selectedBook.coverImageUrl} alt={selectedBook.title} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className={`w-full h-full ${selectedBook.coverColor || 'bg-stone-800'}`} />
+                    )}
+                  </div>
+                  <div className="w-full space-y-2">
+                    <p className="text-xs font-medium text-stone-400 dark:text-stone-500 uppercase tracking-wider">Durum</p>
+                    <select
+                      value={selectedBook.status}
+                      onChange={(e) => updateBookStatus(selectedBook.id, e.target.value as Book['status'])}
+                      className="w-full bg-white dark:bg-[#151820] border border-stone-200 dark:border-white/10 text-stone-700 dark:text-stone-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-stone-500"
+                    >
+                      <option value="want-to-read">Okunacak</option>
+                      <option value="reading">Şu An Okunuyor</option>
+                      <option value="completed">Tamamlandı</option>
+                    </select>
+                  </div>
+                </div>
 
-  const handleBulkSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!bulkText.trim()) return;
-    onAddBulk(bulkText);
-    onClose();
-  };
+                <div className="w-full md:w-2/3 p-8 flex flex-col relative">
+                  <button 
+                    onClick={() => setSelectedBook(null)}
+                    className="absolute top-6 right-6 p-2 text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 hidden md:block rounded-full hover:bg-stone-100 dark:hover:bg-white/5 transition-colors"
+                  >
+                    <X size={20} />
+                  </button>
 
-  return (
-    <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-        <div className="px-6 py-4 border-b border-stone-100 flex items-center justify-between">
-          <h2 className="text-xl font-serif font-semibold text-stone-800">Hızlı Kitap Ekle</h2>
-          <button onClick={onClose} className="p-2 text-stone-400 hover:text-stone-600 rounded-full hover:bg-stone-50">
-            <X size={20} />
-          </button>
-        </div>
-        
-        <div className="px-6 pt-4">
-          <div className="flex space-x-1 bg-stone-100 p-1 rounded-lg">
-            <button 
-              onClick={() => setTab('single')}
-              className={cn("flex-1 py-1.5 text-sm font-medium rounded-md transition-colors", tab === 'single' ? "bg-white text-stone-800 shadow-sm" : "text-stone-500 hover:text-stone-700")}
-            >
-              Tekli Ekle
-            </button>
-            <button 
-              onClick={() => setTab('bulk')}
-              className={cn("flex-1 py-1.5 text-sm font-medium rounded-md transition-colors", tab === 'bulk' ? "bg-white text-stone-800 shadow-sm" : "text-stone-500 hover:text-stone-700")}
-            >
-              Çoklu Ekle
-            </button>
-          </div>
-        </div>
+                  <h2 className="text-3xl font-serif font-semibold text-stone-900 dark:text-stone-100 mb-2 pr-8">{selectedBook.title}</h2>
+                  <p className="text-lg text-stone-500 dark:text-stone-400 mb-6">{selectedBook.author}</p>
+                  
+                  {selectedBook.description && (
+                    <div className="mb-8">
+                      <p className="text-xs font-medium text-stone-400 dark:text-stone-500 uppercase tracking-wider mb-2">Açıklama</p>
+                      <p className="text-sm text-stone-600 dark:text-stone-400 line-clamp-4 leading-relaxed">{selectedBook.description}</p>
+                    </div>
+                  )}
 
-        <div className="p-6">
-          {tab === 'single' ? (
-            <form onSubmit={handleSingleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">Kitap Adı</label>
-                <input 
-                  type="text" 
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-4 py-2 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-800/20 focus:border-stone-500"
-                  placeholder="Örn: Yabancı"
-                  autoFocus
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">Yazar (Opsiyonel)</label>
-                <input 
-                  type="text" 
-                  value={author}
-                  onChange={(e) => setAuthor(e.target.value)}
-                  className="w-full px-4 py-2 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-800/20 focus:border-stone-500"
-                  placeholder="Örn: Albert Camus"
-                />
-              </div>
-              <button type="submit" className="w-full bg-stone-800 hover:bg-stone-900 text-white py-2.5 rounded-xl font-medium mt-6 transition-colors">
-                Kitabı Ekle
-              </button>
-            </form>
-          ) : (
-            <form onSubmit={handleBulkSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">Kitap Listesi</label>
-                <p className="text-xs text-stone-500 mb-2">Her satıra bir kitap gelecek şekilde yazın (Kitap Adı - Yazar)</p>
-                <textarea 
-                  value={bulkText}
-                  onChange={(e) => setBulkText(e.target.value)}
-                  rows={6}
-                  className="w-full px-4 py-2 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-800/20 focus:border-stone-500 resize-none"
-                  placeholder="Yabancı - Albert Camus&#10;Dava - Franz Kafka"
-                  autoFocus
-                />
-              </div>
-              <button type="submit" className="w-full bg-stone-800 hover:bg-stone-900 text-white py-2.5 rounded-xl font-medium mt-6 transition-colors">
-                Toplu Ekle
-              </button>
-            </form>
-          )}
-        </div>
-      </div>
+                  <div className="mt-auto">
+                    <p className="text-xs font-medium text-stone-400 dark:text-stone-500 uppercase tracking-wider mb-3">Hızlı Not Ekle</p>
+                    <form onSubmit={handleAddNote} className="flex gap-2">
+                      <input
+                        type="text"
+                        value={noteContent}
+                        onChange={(e) => setNoteContent(e.target.value)}
+                        placeholder="Bu kitap hakkında ne düşünüyorsun?..."
+                        className="flex-1 bg-stone-50 dark:bg-[#0B0C10] border border-stone-200 dark:border-white/10 text-stone-700 dark:text-stone-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-stone-500"
+                      />
+                      <button 
+                        type="submit"
+                        disabled={!noteContent.trim()}
+                        className="bg-stone-900 dark:bg-white text-stone-50 dark:text-stone-900 px-4 rounded-xl hover:bg-stone-800 dark:hover:bg-stone-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <MessageSquarePlus size={20} />
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          </React.Fragment>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
