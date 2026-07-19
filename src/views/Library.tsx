@@ -14,6 +14,7 @@ export function Library() {
   const [editTitle, setEditTitle] = useState('');
   const [editAuthor, setEditAuthor] = useState('');
   const [editDescription, setEditDescription] = useState('');
+  const [editCoverUrl, setEditCoverUrl] = useState('');
 
   const statusMap = {
     'want-to-read': { label: 'Okunacak', icon: Clock, color: 'text-amber-500' },
@@ -152,17 +153,21 @@ export function Library() {
                     <button 
                       onClick={() => {
                         if (isEditing) {
-                          updateBook(selectedBook.id, {
+                          const updates: Partial<Book> = {
                             title: editTitle,
                             author: editAuthor,
                             description: editDescription
-                          });
-                          setSelectedBook({ ...selectedBook, title: editTitle, author: editAuthor, description: editDescription });
+                          };
+                          if (editCoverUrl) updates.coverImageUrl = editCoverUrl;
+                          
+                          updateBook(selectedBook.id, updates);
+                          setSelectedBook({ ...selectedBook, ...updates });
                           setIsEditing(false);
                         } else {
                           setEditTitle(selectedBook.title);
                           setEditAuthor(selectedBook.author);
                           setEditDescription(selectedBook.description || '');
+                          setEditCoverUrl(selectedBook.coverImageUrl || '');
                           setIsEditing(true);
                         }
                       }}
@@ -198,12 +203,22 @@ export function Library() {
                         value={editTitle} 
                         onChange={e => setEditTitle(e.target.value)} 
                         className="text-3xl font-serif font-semibold text-stone-900 dark:text-stone-100 mb-2 w-full bg-transparent border-b border-stone-300 dark:border-stone-700 focus:outline-none focus:border-stone-500"
+                        placeholder="Kitap Adı"
                       />
                       <input 
                         type="text" 
                         value={editAuthor} 
                         onChange={e => setEditAuthor(e.target.value)} 
-                        className="text-lg text-stone-500 dark:text-stone-400 w-full bg-transparent border-b border-stone-300 dark:border-stone-700 focus:outline-none focus:border-stone-500"
+                        className="text-lg text-stone-500 dark:text-stone-400 mb-4 w-full bg-transparent border-b border-stone-300 dark:border-stone-700 focus:outline-none focus:border-stone-500"
+                        placeholder="Yazar"
+                      />
+                      <label className="block text-xs font-medium text-stone-400 dark:text-stone-500 uppercase tracking-wider mb-1">Kapak Görseli URL</label>
+                      <input 
+                        type="url" 
+                        value={editCoverUrl} 
+                        onChange={e => setEditCoverUrl(e.target.value)} 
+                        className="text-sm text-stone-600 dark:text-stone-300 w-full bg-transparent border-b border-stone-300 dark:border-stone-700 focus:outline-none focus:border-stone-500 pb-1"
+                        placeholder="https://... (Görsel bağlantısı)"
                       />
                     </div>
                   ) : (

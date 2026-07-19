@@ -76,18 +76,21 @@ export function AddBookModal({ isOpen, onClose }: AddBookModalProps) {
     const colors = ['bg-red-800', 'bg-blue-800', 'bg-emerald-800', 'bg-amber-800', 'bg-purple-800', 'bg-stone-800'];
     const randomColor = colors[Math.floor(Math.random() * colors.length)];
 
-    addBook({
+    const bookPayload: Omit<Book, 'id'> = {
       title: title.trim(),
       author: author.trim(),
       status: 'want-to-read',
       isFavorite: false,
       coverColor: randomColor,
-      pageCount: pageCount ? parseInt(pageCount, 10) : undefined,
-      description: description.trim() || undefined,
-      coverImageUrl: coverImageUrl || undefined,
       readPages: 0,
       addedAt: Date.now()
-    });
+    };
+
+    if (pageCount) bookPayload.pageCount = parseInt(pageCount, 10);
+    if (description.trim()) bookPayload.description = description.trim();
+    if (coverImageUrl) bookPayload.coverImageUrl = coverImageUrl;
+
+    addBook(bookPayload);
 
     // Reset and close
     setIsbn('');
@@ -197,6 +200,18 @@ export function AddBookModal({ isOpen, onClose }: AddBookModalProps) {
                     className="w-full px-4 py-3 bg-stone-50 dark:bg-[#0B0C10] border border-stone-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-500 dark:text-stone-200 transition-shadow resize-none"
                     placeholder="Kitap hakkında kısa bir bilgi..."
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1">Kapak Görseli URL (İsteğe Bağlı)</label>
+                  <input
+                    type="url"
+                    value={coverImageUrl}
+                    onChange={(e) => setCoverImageUrl(e.target.value)}
+                    className="w-full px-4 py-3 bg-stone-50 dark:bg-[#0B0C10] border border-stone-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-500 dark:text-stone-200 transition-shadow"
+                    placeholder="Örn: https://ornek.com/kapak.jpg"
+                  />
+                  <p className="text-xs text-stone-500 mt-1">İnternette bulduğunuz bir görselin bağlantısını kopyalayıp buraya yapıştırabilirsiniz.</p>
                 </div>
 
                 <div className="pt-4 pb-2">
