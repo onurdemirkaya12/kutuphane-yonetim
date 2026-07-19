@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { collection, onSnapshot, addDoc, doc, updateDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { Book, Note, ReadingStat } from '../types';
 
 interface AppContextType {
@@ -30,77 +32,125 @@ const mockDiscover: Book[] = [
   { id: 'd4', title: 'Sefiller', author: 'Victor Hugo', status: 'want-to-read', isFavorite: false, coverColor: 'bg-red-900' },
 ];
 
-const initialBooks: Book[] = [
-  { id: '1', title: 'Körlük', author: 'José Saramago', status: 'completed', isFavorite: true, coverColor: 'bg-neutral-600' },
-  { id: '2', title: 'Martin Eden', author: 'Jack London', status: 'reading', isFavorite: false, coverColor: 'bg-slate-700' },
-  { id: '3', title: 'Dönüşüm', author: 'Franz Kafka', status: 'completed', isFavorite: true, coverColor: 'bg-stone-700' },
-];
-
-const initialNotes: Note[] = [
-  { id: 'n1', content: 'Ne kadar az bilirsen, o kadar iyi uyursun.', isFavoriteQuote: true, createdAt: Date.now() - 100000 },
-  { id: 'n2', content: 'Gözler kördür. İnsan ancak yüreğiyle baktığı zaman gerçeği görebilir.', isFavoriteQuote: true, createdAt: Date.now() - 50000 },
-  { id: 'n3', content: 'Kafka\'nın dili sade ama bir o kadar da boğucu.', isFavoriteQuote: false, createdAt: Date.now() },
-];
-
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [books, setBooks] = useState<Book[]>(initialBooks);
-  const [notes, setNotes] = useState<Note[]>(initialNotes);
+  const [books, setBooks] = useState<Book[]>([]);
+  const [notes, setNotes] = useState<Note[]>([]);
 
-  const addBook = (bookData: Omit<Book, 'id'>) => {
-    const newBook: Book = { ...bookData, id: Math.random().toString(36).substring(7) };
-    setBooks(prev => [newBook, ...prev]);
+  // Firebase Realtime Listeners
+  useEffect(() => {
+    // Kitapları dinle
+    const unsubscribeBooks = onSnapshot(collection(db, 'books'), (snapshot) => {
+      const booksData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Book[];
+      setBooks(booksData);
+    });
+
+    // Notları dinle
+    const unsubscribeNotes = onSnapshot(collection(db, 'notes'), (snapshot) => {
+      const notesData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Note[];
+      
+      // En son eklenen not en üstte olsun
+      notesData.sort((a, b) => b.createdAt - a.createdAt);
+      setNotes(notesData);
+    });
+
+    // Component unmount olduğunda dinlemeyi bırak
+    return () => {
+      unsubscribeBooks();
+      unsubscribeNotes();
+    };
+  }, []);
+
+  const addBook = async (bookData: Omit<Book, 'id'>) => {
+    try {
+      await addDoc(collection(db, 'books'), bookData);
+    } catch (error) {
+      console.error("Kitap eklenirken hata oluştu: ", error);
+    }
   };
 
-  const addBooksBulk = (booksText: string) => {
-    const lines = booksText.split('\\n').filter(line => line.trim() !== '');
-    const newBooks: Book[] = lines.map(line => {
+  const addBooksBulk = async (booksText: string) => {
+    const lines = booksText.split('\n').filter(line => line.trim() !== '');
+    const colors = ['bg-red-800', 'bg-blue-800', 'bg-emerald-800', 'bg-amber-800', 'bg-purple-800', 'bg-stone-800'];
+    
+    for (const line of lines) {
       const parts = line.split('-').map(p => p.trim());
       const title = parts[0] || 'Bilinmeyen Kitap';
       const author = parts[1] || 'Bilinmeyen Yazar';
-      const colors = ['bg-red-800', 'bg-blue-800', 'bg-emerald-800', 'bg-amber-800', 'bg-purple-800', 'bg-stone-800'];
       const randomColor = colors[Math.floor(Math.random() * colors.length)];
       
-      return {
-        id: Math.random().toString(36).substring(7),
+      const bookData = {
         title,
         author,
         status: 'want-to-read',
         isFavorite: false,
         coverColor: randomColor
       };
-    });
-    
-    setBooks(prev => [...newBooks, ...prev]);
+      
+      try {
+        await addDoc(collection(db, 'books'), bookData);
+      } catch (error) {
+        console.error("Toplu kitap eklenirken hata oluştu: ", error);
+      }
+    }
   };
 
-  const addNote = (content: string) => {
-    const newNote: Note = {
-      id: Math.random().toString(36).substring(7),
-      content,
-      isFavoriteQuote: false,
-      createdAt: Date.now()
-    };
-    setNotes(prev => [newNote, ...prev]);
+  const addNote = async (content: string) => {
+    try {
+      await addDoc(collection(db, 'notes'), {
+        content,
+        isFavoriteQuote: false,
+        createdAt: Date.now()
+      });
+    } catch (error) {
+      console.error("Not eklenirken hata oluştu: ", error);
+    }
   };
 
-  const toggleFavoriteBook = (id: string) => {
-    setBooks(prev => prev.map(book => 
-      book.id === id ? { ...book, isFavorite: !book.isFavorite } : book
-    ));
+  const toggleFavoriteBook = async (id: string) => {
+    const book = books.find(b => b.id === id);
+    if (book) {
+      const bookRef = doc(db, 'books', id);
+      try {
+        await updateDoc(bookRef, {
+          isFavorite: !book.isFavorite
+        });
+      } catch (error) {
+        console.error("Favori durumu güncellenirken hata oluştu: ", error);
+      }
+    }
   };
 
-  const toggleFavoriteNote = (id: string) => {
-    setNotes(prev => prev.map(note => 
-      note.id === id ? { ...note, isFavoriteQuote: !note.isFavoriteQuote } : note
-    ));
+  const toggleFavoriteNote = async (id: string) => {
+    const note = notes.find(n => n.id === id);
+    if (note) {
+      const noteRef = doc(db, 'notes', id);
+      try {
+        await updateDoc(noteRef, {
+          isFavoriteQuote: !note.isFavoriteQuote
+        });
+      } catch (error) {
+        console.error("Not favori durumu güncellenirken hata oluştu: ", error);
+      }
+    }
   };
 
-  const updateBookStatus = (id: string, status: Book['status']) => {
-    setBooks(prev => prev.map(book => 
-      book.id === id ? { ...book, status } : book
-    ));
+  const updateBookStatus = async (id: string, status: Book['status']) => {
+    const bookRef = doc(db, 'books', id);
+    try {
+      await updateDoc(bookRef, {
+        status
+      });
+    } catch (error) {
+      console.error("Kitap durumu güncellenirken hata oluştu: ", error);
+    }
   };
 
   return (
