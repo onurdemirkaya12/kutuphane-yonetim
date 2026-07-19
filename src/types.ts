@@ -8,6 +8,7 @@ export interface Book {
   isFavorite: boolean;
   coverColor?: string; // We'll keep this as fallback if no image is found
   coverImageUrl?: string;
+  isbn?: string;
   pageCount?: number;
   readPages?: number; // For the progress bar of currently reading books
   description?: string;

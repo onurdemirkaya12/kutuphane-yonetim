@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Plus, BookOpen, Search, Loader2 } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
+import { Book } from '../types';
 
 interface AddBookModalProps {
   isOpen: boolean;
@@ -90,6 +91,7 @@ export function AddBookModal({ isOpen, onClose }: AddBookModalProps) {
     if (pageCount) bookPayload.pageCount = parseInt(pageCount, 10);
     if (description.trim()) bookPayload.description = description.trim();
     if (coverImageUrl) bookPayload.coverImageUrl = coverImageUrl;
+    if (isbn.trim()) bookPayload.isbn = isbn.trim().replace(/[- ]/g, '');
 
     addBook(bookPayload);
 
@@ -215,6 +217,18 @@ export function AddBookModal({ isOpen, onClose }: AddBookModalProps) {
                     placeholder="Örn: https://ornek.com/kapak.jpg"
                   />
                   <p className="text-xs text-stone-500 mt-1">İnternette bulduğunuz bir görselin bağlantısını kopyalayıp buraya yapıştırabilirsiniz.</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1">ISBN (İsteğe Bağlı)</label>
+                  <input
+                    type="text"
+                    value={isbn}
+                    onChange={(e) => setIsbn(e.target.value)}
+                    className="w-full px-4 py-3 bg-stone-50 dark:bg-[#0B0C10] border border-stone-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-500 dark:text-stone-200 transition-shadow"
+                    placeholder="Örn: 9780140449136"
+                  />
+                  <p className="text-xs text-stone-500 mt-1">Bu bilgiyi girmek, ileride Excel çıktısı alırken kitaplarınızı eşleştirmenizi kolaylaştırır.</p>
                 </div>
 
                 <div className="pt-4 pb-2">

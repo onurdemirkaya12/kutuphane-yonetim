@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, BookOpen, Clock, CheckCircle2, ChevronRight, MessageSquarePlus, X, Trash2, Edit3, Save } from 'lucide-react';
+import { Plus, BookOpen, Clock, CheckCircle2, ChevronRight, MessageSquarePlus, X, Trash2, Edit3, Save, Search, Download } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { AddBookModal } from '../components/AddBookModal';
 import { Book } from '../types';
@@ -15,11 +15,46 @@ export function Library() {
   const [editAuthor, setEditAuthor] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editCoverUrl, setEditCoverUrl] = useState('');
+  const [editIsbn, setEditIsbn] = useState('');
+  
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | Book['status']>('all');
 
   const statusMap = {
     'want-to-read': { label: 'Okunacak', icon: Clock, color: 'text-amber-500' },
     'reading': { label: 'Okunuyor', icon: BookOpen, color: 'text-blue-500' },
-    'completed': { label: 'Tamamlandı', icon: CheckCircle2, color: 'text-emerald-500' }
+    'completed': { label: 'Bitti', icon: CheckCircle2, color: 'text-emerald-500' }
+  };
+
+  const filteredBooks = books.filter(book => {
+    const matchesSearch = book.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          book.author.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || book.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  const exportToCSV = () => {
+    // UTF-8 BOM ekliyoruz ki Excel Türkçe karakterleri (ş,ğ,ü vb.) sorunsuz okusun
+    const bom = '\uFEFF';
+    const headers = ['Kitap Adı', 'Yazar', 'Durum', 'Sayfa Sayısı', 'ISBN', 'Eklenme Tarihi'];
+    
+    const rows = books.map(book => [
+      `"${book.title.replace(/"/g, '""')}"`,
+      `"${book.author.replace(/"/g, '""')}"`,
+      `"${statusMap[book.status].label}"`,
+      book.pageCount || '',
+      `"${book.isbn || ''}"`,
+      `"${new Date(book.addedAt).toLocaleDateString('tr-TR')}"`
+    ]);
+
+    const csvContent = bom + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `kutuphanem_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   const handleAddNote = (e: React.FormEvent) => {
@@ -36,13 +71,49 @@ export function Library() {
           <h1 className="text-3xl font-serif font-semibold text-stone-900 dark:text-stone-100 mb-2">Kütüphane</h1>
           <p className="text-stone-500 dark:text-stone-400">Tüm kitaplarınız ve okuma durumlarınız.</p>
         </div>
-        <button
-          onClick={() => setIsAddModalOpen(true)}
-          className="anti-gravity flex items-center gap-2 bg-stone-900 dark:bg-stone-100 text-stone-50 dark:text-stone-900 px-6 py-3 rounded-xl font-medium hover:bg-stone-800 dark:hover:bg-white transition-colors"
+        <div className="flex gap-3">
+          <button
+            onClick={exportToCSV}
+            className="anti-gravity flex items-center gap-2 bg-stone-100 dark:bg-white/5 text-stone-700 dark:text-stone-300 px-4 py-3 rounded-xl font-medium hover:bg-stone-200 dark:hover:bg-white/10 transition-colors"
+            title="Excel (CSV) Olarak İndir"
+          >
+            <Download size={20} />
+            <span className="hidden sm:inline">İndir</span>
+          </button>
+          <button
+            onClick={() => setIsAddModalOpen(true)}
+            className="anti-gravity flex items-center gap-2 bg-stone-900 dark:bg-stone-100 text-stone-50 dark:text-stone-900 px-6 py-3 rounded-xl font-medium hover:bg-stone-800 dark:hover:bg-white transition-colors"
+          >
+            <Plus size={20} />
+            <span className="hidden sm:inline">Yeni Kitap Ekle</span>
+            <span className="sm:hidden">Ekle</span>
+          </button>
+        </div>
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-4 mb-8">
+        <div className="relative flex-1">
+          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-stone-400">
+            <Search size={18} />
+          </div>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-11 pr-4 py-3 bg-white dark:bg-[#1A1E29] border border-stone-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-500 dark:text-stone-200 transition-shadow"
+            placeholder="Kitap veya yazar ara..."
+          />
+        </div>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as any)}
+          className="px-4 py-3 bg-white dark:bg-[#1A1E29] border border-stone-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-500 dark:text-stone-200 cursor-pointer appearance-none min-w-[160px]"
         >
-          <Plus size={20} />
-          Yeni Kitap Ekle
-        </button>
+          <option value="all">Tüm Kitaplar</option>
+          <option value="want-to-read">Okunacaklar</option>
+          <option value="reading">Okunanlar</option>
+          <option value="completed">Bitenler</option>
+        </select>
       </div>
 
       <motion.div 
@@ -50,7 +121,7 @@ export function Library() {
         className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"
       >
         <AnimatePresence>
-          {books.map((book) => {
+          {filteredBooks.map((book) => {
             const StatusIcon = statusMap[book.status].icon;
             
             return (
@@ -173,6 +244,7 @@ export function Library() {
                             description: editDescription
                           };
                           if (editCoverUrl) updates.coverImageUrl = editCoverUrl;
+                          if (editIsbn) updates.isbn = editIsbn;
                           
                           updateBook(selectedBook.id, updates);
                           setSelectedBook({ ...selectedBook, ...updates });
@@ -182,6 +254,7 @@ export function Library() {
                           setEditAuthor(selectedBook.author);
                           setEditDescription(selectedBook.description || '');
                           setEditCoverUrl(selectedBook.coverImageUrl || '');
+                          setEditIsbn(selectedBook.isbn || '');
                           setIsEditing(true);
                         }
                       }}
@@ -226,13 +299,22 @@ export function Library() {
                         className="text-lg text-stone-500 dark:text-stone-400 mb-4 w-full bg-transparent border-b border-stone-300 dark:border-stone-700 focus:outline-none focus:border-stone-500"
                         placeholder="Yazar"
                       />
-                      <label className="block text-xs font-medium text-stone-400 dark:text-stone-500 uppercase tracking-wider mb-1">Kapak Görseli URL</label>
+                      <label className="block text-xs font-medium text-stone-400 dark:text-stone-500 uppercase tracking-wider mb-1 mt-4">Kapak Görseli URL</label>
                       <input 
                         type="url" 
                         value={editCoverUrl} 
                         onChange={e => setEditCoverUrl(e.target.value)} 
                         className="text-sm text-stone-600 dark:text-stone-300 w-full bg-transparent border-b border-stone-300 dark:border-stone-700 focus:outline-none focus:border-stone-500 pb-1"
                         placeholder="https://... (Görsel bağlantısı)"
+                      />
+                      
+                      <label className="block text-xs font-medium text-stone-400 dark:text-stone-500 uppercase tracking-wider mb-1 mt-4">ISBN Numarası</label>
+                      <input 
+                        type="text" 
+                        value={editIsbn} 
+                        onChange={e => setEditIsbn(e.target.value)} 
+                        className="text-sm text-stone-600 dark:text-stone-300 w-full bg-transparent border-b border-stone-300 dark:border-stone-700 focus:outline-none focus:border-stone-500 pb-1"
+                        placeholder="Örn: 9780140449136"
                       />
                     </div>
                   ) : (
