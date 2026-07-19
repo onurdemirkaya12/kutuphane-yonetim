@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Plus, BookOpen, Search, Loader2 } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
@@ -102,7 +103,9 @@ export function AddBookModal({ isOpen, onClose }: AddBookModalProps) {
     onClose();
   };
 
-  return (
+  if (!document.body) return null;
+
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <React.Fragment>
@@ -229,6 +232,7 @@ export function AddBookModal({ isOpen, onClose }: AddBookModalProps) {
           </motion.div>
         </React.Fragment>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }
