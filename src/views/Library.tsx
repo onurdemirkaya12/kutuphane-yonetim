@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Plus, BookOpen, Clock, CheckCircle2, ChevronRight, MessageSquarePlus, X, Trash2, Edit3, Save, Search, Download } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
@@ -179,8 +180,9 @@ export function Library() {
       <AddBookModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} />
 
       {/* Book Detail Expanded Modal */}
-      <AnimatePresence>
-        {selectedBook && (
+      {document.body ? createPortal(
+        <AnimatePresence>
+          {selectedBook && (
           <React.Fragment>
             <motion.div
               initial={{ opacity: 0 }}
@@ -426,9 +428,11 @@ export function Library() {
                 </div>
               </motion.div>
             </div>
-          </React.Fragment>
-        )}
-      </AnimatePresence>
+            </React.Fragment>
+          )}
+        </AnimatePresence>,
+        document.body
+      ) : null}
     </div>
   );
 }
