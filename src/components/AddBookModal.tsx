@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Plus, BookOpen, Search, Loader2 } from 'lucide-react';
+import { X, Plus, BookOpen, Search, Loader2, Camera } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { Book } from '../types';
+import { BarcodeScanner } from './BarcodeScanner';
 
 interface AddBookModalProps {
   isOpen: boolean;
@@ -20,12 +21,14 @@ export function AddBookModal({ isOpen, onClose }: AddBookModalProps) {
   const [coverImageUrl, setCoverImageUrl] = useState('');
   const [category, setCategory] = useState('');
   const [isSearchingIsbn, setIsSearchingIsbn] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
-  const handleIsbnSearch = async () => {
-    if (!isbn.trim()) return;
+  const handleIsbnSearch = async (overrideIsbn?: string) => {
+    const isbnToSearch = typeof overrideIsbn === 'string' ? overrideIsbn : isbn;
+    if (!isbnToSearch.trim()) return;
     setIsSearchingIsbn(true);
     try {
-      const cleanIsbn = isbn.replace(/[- ]/g, '');
+      const cleanIsbn = isbnToSearch.replace(/[- ]/g, '');
       
       // 1. Önce Google Books API'den deneyelim (Açıklama ve Kapak için çok daha zengin)
       const gbResponse = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanIsbn}`);
@@ -143,26 +146,55 @@ export function AddBookModal({ isOpen, onClose }: AddBookModalProps) {
             </div>
 
             <div className="p-6 overflow-y-auto">
-              <div className="mb-6 p-4 bg-stone-50 dark:bg-[#151820] rounded-xl border border-stone-200 dark:border-white/5">
-                <label className="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-2">ISBN ile Otomatik Doldur</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={isbn}
-                    onChange={(e) => setIsbn(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleIsbnSearch()}
-                    className="flex-1 px-4 py-2 bg-white dark:bg-[#0B0C10] border border-stone-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-500 dark:text-stone-200"
-                    placeholder="Örn: 9780140449136"
-                  />
-                  <button
-                    onClick={handleIsbnSearch}
-                    disabled={isSearchingIsbn || !isbn.trim()}
-                    className="flex items-center gap-2 bg-stone-200 dark:bg-white/10 text-stone-700 dark:text-stone-200 px-4 py-2 rounded-xl hover:bg-stone-300 dark:hover:bg-white/20 transition-colors disabled:opacity-50"
-                  >
-                    {isSearchingIsbn ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />}
-                    Bul
-                  </button>
+              <div className="mb-6 p-4 bg-stone-50 dark:bg-[#151820] rounded-xl border border-stone-200 dark:border-white/5 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-2">ISBN ile Otomatik Doldur</label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsScannerOpen(!isScannerOpen)}
+                      className={`p-2 rounded-xl border transition-colors flex items-center justify-center ${isScannerOpen ? 'bg-amber-100 border-amber-200 text-amber-700 dark:bg-amber-900/30 dark:border-amber-800 dark:text-amber-500' : 'bg-white dark:bg-[#0B0C10] border-stone-200 dark:border-white/10 text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-white/5'}`}
+                      title="Kamera ile Tara"
+                    >
+                      <Camera size={20} />
+                    </button>
+                    <input
+                      type="text"
+                      autoFocus
+                      value={isbn}
+                      onChange={(e) => setIsbn(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleIsbnSearch();
+                        }
+                      }}
+                      className="flex-1 px-4 py-2 bg-white dark:bg-[#0B0C10] border border-stone-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-500 dark:text-stone-200"
+                      placeholder="Örn: 9780140449136"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleIsbnSearch()}
+                      disabled={isSearchingIsbn || !isbn.trim()}
+                      className="flex items-center gap-2 bg-stone-200 dark:bg-white/10 text-stone-700 dark:text-stone-200 px-4 py-2 rounded-xl hover:bg-stone-300 dark:hover:bg-white/20 transition-colors disabled:opacity-50"
+                    >
+                      {isSearchingIsbn ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />}
+                      Bul
+                    </button>
+                  </div>
                 </div>
+
+                {isScannerOpen && (
+                  <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                    <BarcodeScanner 
+                      onResult={(result) => {
+                        setIsbn(result);
+                        setIsScannerOpen(false);
+                        handleIsbnSearch(result);
+                      }} 
+                    />
+                  </div>
+                )}
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
