@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Plus, BookOpen, Search, Loader2, Camera } from 'lucide-react';
+import { X, Plus, BookOpen, Search, Loader2, Camera, Zap, CheckCircle2 } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { Book } from '../types';
 import { BarcodeScanner } from './BarcodeScanner';
@@ -22,6 +22,8 @@ export function AddBookModal({ isOpen, onClose }: AddBookModalProps) {
   const [category, setCategory] = useState('');
   const [isSearchingIsbn, setIsSearchingIsbn] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [isBulkMode, setIsBulkMode] = useState(false);
+  const [scannedBooks, setScannedBooks] = useState<Omit<Book, 'id'>[]>([]);
 
   const handleIsbnSearch = async (overrideIsbn?: string) => {
     const isbnToSearch = typeof overrideIsbn === 'string' ? overrideIsbn : isbn;
@@ -30,45 +32,74 @@ export function AddBookModal({ isOpen, onClose }: AddBookModalProps) {
     try {
       const cleanIsbn = isbnToSearch.replace(/[- ]/g, '');
       
-      // 1. Önce Google Books API'den deneyelim (Açıklama ve Kapak için çok daha zengin)
+      let foundBook: any = null;
+
       const gbResponse = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanIsbn}`);
       if (gbResponse.ok) {
         const gbData = await gbResponse.json();
         if (gbData.items && gbData.items.length > 0) {
           const volumeInfo = gbData.items[0].volumeInfo;
-          setTitle(volumeInfo.title || '');
-          setAuthor(volumeInfo.authors ? volumeInfo.authors.join(', ') : '');
-          if (volumeInfo.pageCount) setPageCount(volumeInfo.pageCount.toString());
-          if (volumeInfo.description) setDescription(volumeInfo.description);
-          if (volumeInfo.categories && volumeInfo.categories.length > 0) setCategory(volumeInfo.categories.join(', '));
-          if (volumeInfo.imageLinks?.thumbnail) {
-            setCoverImageUrl(volumeInfo.imageLinks.thumbnail.replace('http:', 'https:'));
-          }
-          setIsSearchingIsbn(false);
-          return; // Google'dan bulduysak burada bitir.
+          foundBook = {
+            title: volumeInfo.title || '',
+            author: volumeInfo.authors ? volumeInfo.authors.join(', ') : '',
+            pageCount: volumeInfo.pageCount ? volumeInfo.pageCount.toString() : '',
+            description: volumeInfo.description || '',
+            category: (volumeInfo.categories && volumeInfo.categories.length > 0) ? volumeInfo.categories.join(', ') : '',
+            coverImageUrl: volumeInfo.imageLinks?.thumbnail ? volumeInfo.imageLinks.thumbnail.replace('http:', 'https:') : '',
+          };
         }
       }
 
-      // 2. Google'da bulamazsak Open Library API'ye soralım
-      const olResponse = await fetch(`https://openlibrary.org/search.json?isbn=${cleanIsbn}`);
-      if (olResponse.ok) {
-        const olData = await olResponse.json();
-        if (olData.docs && olData.docs.length > 0) {
-          const doc = olData.docs[0];
-          setTitle(doc.title || '');
-          setAuthor(doc.author_name ? doc.author_name.join(', ') : '');
-          if (doc.number_of_pages_median) setPageCount(doc.number_of_pages_median.toString());
-          if (doc.first_publish_year && !description) setDescription(`İlk basım yılı: ${doc.first_publish_year}`);
-          if (doc.subject && doc.subject.length > 0) setCategory(doc.subject[0]);
-          if (doc.cover_i) {
-            setCoverImageUrl(`https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg`);
+      if (!foundBook) {
+        const olResponse = await fetch(`https://openlibrary.org/search.json?isbn=${cleanIsbn}`);
+        if (olResponse.ok) {
+          const olData = await olResponse.json();
+          if (olData.docs && olData.docs.length > 0) {
+            const doc = olData.docs[0];
+            foundBook = {
+              title: doc.title || '',
+              author: doc.author_name ? doc.author_name.join(', ') : '',
+              pageCount: doc.number_of_pages_median ? doc.number_of_pages_median.toString() : '',
+              description: doc.first_publish_year ? `İlk basım yılı: ${doc.first_publish_year}` : '',
+              category: (doc.subject && doc.subject.length > 0) ? doc.subject[0] : '',
+              coverImageUrl: doc.cover_i ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg` : '',
+            };
           }
-          setIsSearchingIsbn(false);
-          return;
         }
       }
-      
-      alert('Bu ISBN numarasına ait kitap bulunamadı.');
+
+      if (foundBook) {
+        if (isBulkMode) {
+          const colors = ['bg-red-800', 'bg-blue-800', 'bg-emerald-800', 'bg-amber-800', 'bg-purple-800', 'bg-stone-800'];
+          const randomColor = colors[Math.floor(Math.random() * colors.length)];
+          const bookPayload: Omit<Book, 'id'> = {
+            title: foundBook.title || 'İsimsiz Kitap',
+            author: foundBook.author || 'Bilinmeyen Yazar',
+            status: 'want-to-read',
+            isFavorite: false,
+            coverColor: randomColor,
+            readPages: 0,
+            addedAt: Date.now(),
+            ...(foundBook.pageCount && { pageCount: parseInt(foundBook.pageCount, 10) }),
+            ...(foundBook.description && { description: foundBook.description }),
+            ...(foundBook.category && { category: foundBook.category }),
+            ...(foundBook.coverImageUrl && { coverImageUrl: foundBook.coverImageUrl }),
+            isbn: cleanIsbn
+          };
+          addBook(bookPayload);
+          setScannedBooks(prev => [bookPayload, ...prev]);
+          setIsbn('');
+        } else {
+          setTitle(foundBook.title);
+          setAuthor(foundBook.author);
+          setPageCount(foundBook.pageCount);
+          setDescription(foundBook.description);
+          setCategory(foundBook.category);
+          setCoverImageUrl(foundBook.coverImageUrl);
+        }
+      } else {
+        alert('Bu ISBN numarasına ait kitap bulunamadı.');
+      }
     } catch (error) {
       console.error('ISBN araması başarısız:', error);
       alert('Arama sırasında bir hata oluştu.');
@@ -146,9 +177,30 @@ export function AddBookModal({ isOpen, onClose }: AddBookModalProps) {
             </div>
 
             <div className="p-6 overflow-y-auto">
+              <div className="flex bg-stone-100 dark:bg-[#151820] p-1 rounded-xl mb-6">
+                <button
+                  type="button"
+                  onClick={() => setIsBulkMode(false)}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium rounded-lg transition-colors ${!isBulkMode ? 'bg-white dark:bg-[#0B0C10] text-stone-900 dark:text-stone-100 shadow-sm' : 'text-stone-500 hover:text-stone-700 dark:hover:text-stone-300'}`}
+                >
+                  <Plus size={16} />
+                  Detaylı Ekle
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsBulkMode(true)}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium rounded-lg transition-colors ${isBulkMode ? 'bg-amber-500 text-white shadow-sm' : 'text-stone-500 hover:text-stone-700 dark:hover:text-stone-300'}`}
+                >
+                  <Zap size={16} />
+                  Hızlı Çoklu Ekle
+                </button>
+              </div>
+
               <div className="mb-6 p-4 bg-stone-50 dark:bg-[#151820] rounded-xl border border-stone-200 dark:border-white/5 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-2">ISBN ile Otomatik Doldur</label>
+                  <label className="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-2">
+                    {isBulkMode ? 'Kitapları Arka Arkaya Tarayın' : 'ISBN ile Otomatik Doldur'}
+                  </label>
                   <div className="flex gap-2">
                     <button
                       type="button"
@@ -189,7 +241,9 @@ export function AddBookModal({ isOpen, onClose }: AddBookModalProps) {
                     <BarcodeScanner 
                       onResult={(result) => {
                         setIsbn(result);
-                        setIsScannerOpen(false);
+                        if (!isBulkMode) {
+                           setIsScannerOpen(false);
+                        }
                         handleIsbnSearch(result);
                       }} 
                     />
@@ -197,99 +251,129 @@ export function AddBookModal({ isOpen, onClose }: AddBookModalProps) {
                 )}
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1">Kitap Adı *</label>
-                  <input
-                    type="text"
-                    required
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    className="w-full px-4 py-3 bg-stone-50 dark:bg-[#0B0C10] border border-stone-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-500 dark:text-stone-200 transition-shadow"
-                    placeholder="Örn: Suç ve Ceza"
-                  />
-                </div>
+              {!isBulkMode ? (
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1">Kitap Adı *</label>
+                    <input
+                      type="text"
+                      required
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      className="w-full px-4 py-3 bg-stone-50 dark:bg-[#0B0C10] border border-stone-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-500 dark:text-stone-200 transition-shadow"
+                      placeholder="Örn: Suç ve Ceza"
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1">Yazar *</label>
-                  <input
-                    type="text"
-                    required
-                    value={author}
-                    onChange={(e) => setAuthor(e.target.value)}
-                    className="w-full px-4 py-3 bg-stone-50 dark:bg-[#0B0C10] border border-stone-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-500 dark:text-stone-200 transition-shadow"
-                    placeholder="Örn: Dostoyevski"
-                  />
-                </div>
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1">Yazar *</label>
+                    <input
+                      type="text"
+                      required
+                      value={author}
+                      onChange={(e) => setAuthor(e.target.value)}
+                      className="w-full px-4 py-3 bg-stone-50 dark:bg-[#0B0C10] border border-stone-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-500 dark:text-stone-200 transition-shadow"
+                      placeholder="Örn: Dostoyevski"
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1">Kategori (İsteğe Bağlı)</label>
-                  <input
-                    type="text"
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="w-full px-4 py-3 bg-stone-50 dark:bg-[#0B0C10] border border-stone-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-500 dark:text-stone-200 transition-shadow"
-                    placeholder="Örn: Edebiyat, Psikoloji"
-                  />
-                </div>
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1">Kategori (İsteğe Bağlı)</label>
+                    <input
+                      type="text"
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value)}
+                      className="w-full px-4 py-3 bg-stone-50 dark:bg-[#0B0C10] border border-stone-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-500 dark:text-stone-200 transition-shadow"
+                      placeholder="Örn: Edebiyat, Psikoloji"
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1">Sayfa Sayısı (İsteğe Bağlı)</label>
-                  <input
-                    type="number"
-                    value={pageCount}
-                    onChange={(e) => setPageCount(e.target.value)}
-                    className="w-full px-4 py-3 bg-stone-50 dark:bg-[#0B0C10] border border-stone-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-500 dark:text-stone-200 transition-shadow"
-                    placeholder="Örn: 687"
-                  />
-                </div>
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1">Sayfa Sayısı (İsteğe Bağlı)</label>
+                    <input
+                      type="number"
+                      value={pageCount}
+                      onChange={(e) => setPageCount(e.target.value)}
+                      className="w-full px-4 py-3 bg-stone-50 dark:bg-[#0B0C10] border border-stone-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-500 dark:text-stone-200 transition-shadow"
+                      placeholder="Örn: 687"
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1">Açıklama / Konu (İsteğe Bağlı)</label>
-                  <textarea
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    rows={3}
-                    className="w-full px-4 py-3 bg-stone-50 dark:bg-[#0B0C10] border border-stone-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-500 dark:text-stone-200 transition-shadow resize-none"
-                    placeholder="Kitap hakkında kısa bir bilgi..."
-                  />
-                </div>
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1">Açıklama / Konu (İsteğe Bağlı)</label>
+                    <textarea
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      rows={3}
+                      className="w-full px-4 py-3 bg-stone-50 dark:bg-[#0B0C10] border border-stone-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-500 dark:text-stone-200 transition-shadow resize-none"
+                      placeholder="Kitap hakkında kısa bir bilgi..."
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1">Kapak Görseli URL (İsteğe Bağlı)</label>
-                  <input
-                    type="url"
-                    value={coverImageUrl}
-                    onChange={(e) => setCoverImageUrl(e.target.value)}
-                    className="w-full px-4 py-3 bg-stone-50 dark:bg-[#0B0C10] border border-stone-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-500 dark:text-stone-200 transition-shadow"
-                    placeholder="Örn: https://ornek.com/kapak.jpg"
-                  />
-                  <p className="text-xs text-stone-500 mt-1">İnternette bulduğunuz bir görselin bağlantısını kopyalayıp buraya yapıştırabilirsiniz.</p>
-                </div>
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1">Kapak Görseli URL (İsteğe Bağlı)</label>
+                    <input
+                      type="url"
+                      value={coverImageUrl}
+                      onChange={(e) => setCoverImageUrl(e.target.value)}
+                      className="w-full px-4 py-3 bg-stone-50 dark:bg-[#0B0C10] border border-stone-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-500 dark:text-stone-200 transition-shadow"
+                      placeholder="Örn: https://ornek.com/kapak.jpg"
+                    />
+                    <p className="text-xs text-stone-500 mt-1">İnternette bulduğunuz bir görselin bağlantısını kopyalayıp buraya yapıştırabilirsiniz.</p>
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1">ISBN (İsteğe Bağlı)</label>
-                  <input
-                    type="text"
-                    value={isbn}
-                    onChange={(e) => setIsbn(e.target.value)}
-                    className="w-full px-4 py-3 bg-stone-50 dark:bg-[#0B0C10] border border-stone-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-500 dark:text-stone-200 transition-shadow"
-                    placeholder="Örn: 9780140449136"
-                  />
-                  <p className="text-xs text-stone-500 mt-1">Bu bilgiyi girmek, ileride Excel çıktısı alırken kitaplarınızı eşleştirmenizi kolaylaştırır.</p>
-                </div>
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1">ISBN (İsteğe Bağlı)</label>
+                    <input
+                      type="text"
+                      value={isbn}
+                      onChange={(e) => setIsbn(e.target.value)}
+                      className="w-full px-4 py-3 bg-stone-50 dark:bg-[#0B0C10] border border-stone-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-500 dark:text-stone-200 transition-shadow"
+                      placeholder="Örn: 9780140449136"
+                    />
+                    <p className="text-xs text-stone-500 mt-1">Bu bilgiyi girmek, ileride Excel çıktısı alırken kitaplarınızı eşleştirmenizi kolaylaştırır.</p>
+                  </div>
 
-                <div className="pt-4 pb-2">
-                  <button
-                    type="submit"
-                    disabled={!title.trim() || !author.trim()}
-                    className="w-full flex items-center justify-center gap-2 bg-stone-900 dark:bg-stone-100 text-stone-50 dark:text-stone-900 py-3 px-4 rounded-xl font-medium hover:bg-stone-800 dark:hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <Plus size={20} />
-                    Kütüphaneye Ekle
-                  </button>
+                  <div className="pt-4 pb-2">
+                    <button
+                      type="submit"
+                      disabled={!title.trim() || !author.trim()}
+                      className="w-full flex items-center justify-center gap-2 bg-stone-900 dark:bg-stone-100 text-stone-50 dark:text-stone-900 py-3 px-4 rounded-xl font-medium hover:bg-stone-800 dark:hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <Plus size={20} />
+                      Kütüphaneye Ekle
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium text-stone-500 dark:text-stone-400 px-1">Bu Oturumda Eklenenler ({scannedBooks.length})</h3>
+                  {scannedBooks.length === 0 ? (
+                    <div className="py-8 text-center text-stone-400 dark:text-stone-500 border border-dashed border-stone-200 dark:border-white/10 rounded-xl">
+                      Henüz kitap taranmadı. Taradığınız kitaplar doğrudan kütüphanenize eklenecektir.
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {scannedBooks.map((book, idx) => (
+                        <div key={idx} className="flex items-center gap-3 p-3 bg-white dark:bg-[#0B0C10] border border-stone-200 dark:border-white/5 rounded-xl animate-in slide-in-from-top-2">
+                          <div className="w-10 h-14 rounded overflow-hidden shrink-0 bg-stone-100 dark:bg-stone-800">
+                            {book.coverImageUrl ? (
+                              <img src={book.coverImageUrl} alt={book.title} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className={`w-full h-full ${book.coverColor}`} />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-medium text-stone-900 dark:text-stone-100 truncate">{book.title}</h4>
+                            <p className="text-sm text-stone-500 truncate">{book.author}</p>
+                          </div>
+                          <CheckCircle2 className="text-emerald-500 shrink-0" size={20} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              </form>
+              )}
             </div>
           </motion.div>
         </React.Fragment>
