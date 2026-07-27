@@ -16,16 +16,46 @@ export function BarcodeScanner({ onResult }: BarcodeScannerProps) {
       try {
         html5Qrcode = new Html5Qrcode("isbn-reader");
         await html5Qrcode.start(
-          { facingMode: "environment" },
+          { 
+            facingMode: "environment",
+            // @ts-ignore - advanced constraints like focusMode might not be typed
+            advanced: [{ focusMode: "continuous" }]
+          },
           {
-            fps: 10,
-            qrbox: { width: 250, height: 150 },
-            formatsToSupport: [Html5QrcodeSupportedFormats.EAN_13]
+            fps: 30, // FPS'yi artırdık, daha hızlı okuma yapacak
+            qrbox: (viewfinderWidth, viewfinderHeight) => {
+              // Genişliği ekrana göre dinamik ayarla, barcode (ISBN) için yatay uzun bir kutu yap
+              const width = Math.min(viewfinderWidth * 0.9, 450);
+              const height = Math.min(viewfinderHeight * 0.4, 200);
+              return { width, height };
+            },
+            formatsToSupport: [
+              Html5QrcodeSupportedFormats.EAN_13,
+              Html5QrcodeSupportedFormats.EAN_8,
+              Html5QrcodeSupportedFormats.UPC_A,
+              Html5QrcodeSupportedFormats.UPC_E
+            ],
+            // @ts-ignore - experimental özellikleri kullanarak cihazın kendi okuyucusunu (native) destekliyorsa onu kullanmasını sağlıyoruz (çok daha hızlıdır)
+            experimentalFeatures: {
+              useBarCodeDetectorIfSupported: true
+            }
           },
           (decodedText) => {
             if (isMounted && html5Qrcode?.isScanning) {
               html5Qrcode.pause(true); // Pause scanning to prevent multiple triggers
               onResult(decodedText);
+              
+              // Çoklu tarama (bulk mode) için 2 saniye sonra otomatik devam et
+              setTimeout(() => {
+                if (isMounted && html5Qrcode) {
+                  try {
+                    // getState() !== 1 (NOT_STARTED) and not scanning
+                    html5Qrcode.resume();
+                  } catch (e) {
+                    console.log("Resume error:", e);
+                  }
+                }
+              }, 2000);
             }
           },
           undefined // Ignore frame scan errors
