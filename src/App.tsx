@@ -5,6 +5,7 @@ import { Overview } from './views/Overview';
 import { Library } from './views/Library';
 import { Notes } from './views/Notes';
 import { Profile } from './views/Profile';
+import { FocusTimer } from './components/FocusTimer';
 import { AnimatePresence, motion } from 'motion/react';
 
 function AppContent() {
@@ -31,6 +32,8 @@ function AppContent() {
           </motion.div>
         </AnimatePresence>
       </main>
+      
+      <FocusTimer />
     </div>
   );
 }

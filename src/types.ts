@@ -40,3 +40,18 @@ export interface UserProfile {
   yearlyGoal: number;
   joinDate: number;
 }
+
+export interface Shelf {
+  id: string;
+  name: string;
+  color: string;
+  bookIds: string[];
+  createdAt: number;
+}
+
+export interface ActivityLog {
+  id: string;
+  date: string; // YYYY-MM-DD format
+  type: 'read' | 'note' | 'focus';
+  count: number;
+}

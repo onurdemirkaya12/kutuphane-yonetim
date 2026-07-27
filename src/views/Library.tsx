@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, BookOpen, Clock, CheckCircle2, ChevronRight, MessageSquarePlus, X, Trash2, Edit3, Save, Search, Download, Wand2, Loader2, Heart, LayoutGrid, List, ArrowUpDown } from 'lucide-react';
+import { Plus, BookOpen, Clock, CheckCircle2, ChevronRight, MessageSquarePlus, X, Trash2, Edit3, Save, Search, Download, Wand2, Loader2, Heart, LayoutGrid, List, ArrowUpDown, BookmarkPlus, FolderPlus } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { AddBookModal } from '../components/AddBookModal';
-import { Book } from '../types';
+import { Book, Shelf } from '../types';
 
 export function Library() {
-  const { books, updateBookStatus, updateBook, deleteBook, addNote, toggleFavoriteBook } = useAppContext();
+  const { books, shelves, addShelf, deleteShelf, toggleBookInShelf, updateBookStatus, updateBook, deleteBook, addNote, toggleFavoriteBook } = useAppContext();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'all' | 'shelves'>('all');
+  const [newShelfName, setNewShelfName] = useState('');
+  const [isCreatingShelf, setIsCreatingShelf] = useState(false);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [noteContent, setNoteContent] = useState('');
   const [isEditing, setIsEditing] = useState(false);
@@ -214,7 +217,25 @@ export function Library() {
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-4 mb-8">
+      <div className="flex border-b border-stone-200 dark:border-white/10 mb-8">
+        <button
+          onClick={() => setActiveTab('all')}
+          className={`px-6 py-3 font-medium transition-colors border-b-2 ${activeTab === 'all' ? 'border-amber-500 text-amber-600 dark:text-amber-500' : 'border-transparent text-stone-500 hover:text-stone-700 dark:hover:text-stone-300'}`}
+        >
+          Tüm Kitaplar
+        </button>
+        <button
+          onClick={() => setActiveTab('shelves')}
+          className={`px-6 py-3 font-medium transition-colors border-b-2 flex items-center gap-2 ${activeTab === 'shelves' ? 'border-amber-500 text-amber-600 dark:text-amber-500' : 'border-transparent text-stone-500 hover:text-stone-700 dark:hover:text-stone-300'}`}
+        >
+          <BookmarkPlus size={18} />
+          Özel Raflarım
+        </button>
+      </div>
+
+      {activeTab === 'all' && (
+        <>
+          <div className="flex flex-col lg:flex-row gap-4 mb-8">
         <div className="relative flex-1">
           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-stone-400">
             <Search size={18} />
@@ -446,11 +467,121 @@ export function Library() {
         </motion.div>
       )}
 
-      {books.length === 0 && (
+      {activeTab === 'all' && books.length === 0 && (
         <div className="py-20 text-center flex flex-col items-center justify-center text-stone-400">
           <BookOpen size={64} className="mb-4 opacity-50" />
           <p className="text-lg">Kütüphaneniz şu an boş.</p>
           <p className="text-sm mt-2">Sağ üstteki butona tıklayarak kitap eklemeye başlayabilirsiniz.</p>
+        </div>
+      )}
+      </>
+      )}
+
+      {activeTab === 'shelves' && (
+        <div className="space-y-12">
+          {isCreatingShelf ? (
+            <div className="flex items-center gap-4 bg-white dark:bg-[#1A1E29] p-4 rounded-2xl border border-stone-200 dark:border-white/10 max-w-md">
+              <input 
+                type="text"
+                autoFocus
+                value={newShelfName}
+                onChange={(e) => setNewShelfName(e.target.value)}
+                placeholder="Raf Adı (Örn: Yazın Okunacaklar)"
+                className="flex-1 bg-stone-100 dark:bg-black/20 border-none rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 text-stone-800 dark:text-stone-200"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && newShelfName.trim()) {
+                    addShelf(newShelfName.trim(), 'bg-stone-500');
+                    setNewShelfName('');
+                    setIsCreatingShelf(false);
+                  }
+                }}
+              />
+              <button 
+                onClick={() => {
+                  if (newShelfName.trim()) {
+                    addShelf(newShelfName.trim(), 'bg-stone-500');
+                  }
+                  setNewShelfName('');
+                  setIsCreatingShelf(false);
+                }}
+                className="bg-amber-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-amber-600 transition-colors"
+              >
+                Oluştur
+              </button>
+              <button onClick={() => setIsCreatingShelf(false)} className="p-2 text-stone-400 hover:text-stone-600">
+                <X size={20} />
+              </button>
+            </div>
+          ) : (
+            <button 
+              onClick={() => setIsCreatingShelf(true)}
+              className="flex items-center gap-2 text-amber-600 dark:text-amber-500 font-medium hover:underline bg-amber-50 dark:bg-amber-500/10 px-4 py-2 rounded-xl border border-amber-200 dark:border-amber-500/20 transition-colors w-fit"
+            >
+              <FolderPlus size={18} /> Yeni Raf Oluştur
+            </button>
+          )}
+
+          {shelves.length === 0 && !isCreatingShelf && (
+            <div className="py-20 text-center flex flex-col items-center justify-center text-stone-400">
+              <BookmarkPlus size={64} className="mb-4 opacity-50" />
+              <p className="text-lg">Henüz hiç raf oluşturmadınız.</p>
+              <p className="text-sm mt-2">Özel listeler yapmak için yeni raf oluşturun ve kitaplarınızı ekleyin.</p>
+            </div>
+          )}
+
+          {shelves.map(shelf => {
+            const shelfBooks = books.filter(b => shelf.bookIds.includes(b.id));
+            
+            return (
+              <div key={shelf.id} className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-serif font-semibold text-stone-900 dark:text-stone-100 flex items-center gap-3">
+                    {shelf.name}
+                    <span className="text-sm font-sans font-medium text-stone-400 bg-stone-100 dark:bg-white/5 px-2.5 py-0.5 rounded-full">{shelfBooks.length} Kitap</span>
+                  </h2>
+                  <button onClick={() => {
+                    if(window.confirm(`'${shelf.name}' rafını silmek istediğinize emin misiniz? (İçindeki kitaplar silinmez)`)) {
+                      deleteShelf(shelf.id);
+                    }
+                  }} className="text-stone-400 hover:text-red-500 p-2 rounded-lg hover:bg-stone-100 dark:hover:bg-white/5">
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+                
+                {shelfBooks.length === 0 ? (
+                  <div className="p-8 border-2 border-dashed border-stone-200 dark:border-white/10 rounded-2xl text-center text-stone-400 text-sm">
+                    Bu raf şu an boş. Kitap detayına girerek bu rafa kitap ekleyebilirsiniz.
+                  </div>
+                ) : (
+                  <div className="flex gap-4 overflow-x-auto pb-4 hide-scrollbar snap-x snap-mandatory">
+                    {shelfBooks.map(book => (
+                      <div 
+                        key={book.id} 
+                        onClick={() => setSelectedBook(book)}
+                        className="w-32 sm:w-40 shrink-0 snap-start cursor-pointer group"
+                      >
+                        <div className="aspect-[2/3] rounded-xl shadow-md overflow-hidden mb-3 bg-stone-200 dark:bg-stone-800 relative">
+                          {book.coverImageUrl ? (
+                            <img src={book.coverImageUrl} alt={book.title} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+                          ) : (
+                            <div className={`w-full h-full ${book.coverColor || 'bg-stone-800'}`} />
+                          )}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); toggleBookInShelf(shelf.id, book.id); }}
+                            className="absolute top-2 right-2 p-1.5 bg-red-500/90 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Raftan Çıkar"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                        <h3 className="font-medium text-stone-900 dark:text-stone-100 text-sm truncate">{book.title}</h3>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -695,6 +826,32 @@ export function Library() {
                         )}
                       </div>
                       {!selectedBook.category && !selectedBook.rating && !selectedBook.emotion && <div className="mb-6" />}
+                      
+                      {/* Raf Seçimi */}
+                      {shelves.length > 0 && (
+                        <div className="mb-6">
+                          <p className="text-xs font-medium text-stone-400 dark:text-stone-500 uppercase tracking-wider mb-2">Bulunduğu Raflar</p>
+                          <div className="flex flex-wrap gap-2">
+                            {shelves.map(shelf => {
+                              const inShelf = shelf.bookIds.includes(selectedBook.id);
+                              return (
+                                <button
+                                  key={shelf.id}
+                                  onClick={() => toggleBookInShelf(shelf.id, selectedBook.id)}
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
+                                    inShelf 
+                                      ? 'bg-amber-500 text-white border-amber-500' 
+                                      : 'bg-stone-50 dark:bg-[#151820] text-stone-500 dark:text-stone-400 border-stone-200 dark:border-white/10 hover:border-amber-500 hover:text-amber-500'
+                                  }`}
+                                >
+                                  {inShelf ? <CheckCircle2 size={14} /> : <Plus size={14} />}
+                                  {shelf.name}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </>
                   )}
                   

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { collection, onSnapshot, addDoc, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { Book, Note, ReadingStat, UserProfile } from '../types';
+import { Book, Note, ReadingStat, UserProfile, Shelf, ActivityLog } from '../types';
 
 export type Theme = 'light' | 'dark';
 
@@ -10,7 +10,13 @@ interface AppContextType {
   notes: Note[];
   stats: ReadingStat[];
   userProfile: UserProfile;
+  shelves: Shelf[];
+  activityLogs: ActivityLog[];
   updateUserProfile: (profile: Partial<UserProfile>) => void;
+  addShelf: (name: string, color: string) => void;
+  deleteShelf: (id: string) => void;
+  toggleBookInShelf: (shelfId: string, bookId: string) => void;
+  logActivity: (type: ActivityLog['type'], count?: number) => void;
   theme: Theme;
   toggleTheme: () => void;
   addBook: (book: Omit<Book, 'id'>) => void;
@@ -47,6 +53,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
       yearlyGoal: 50,
       joinDate: Date.now()
     };
+  });
+  
+  const [shelves, setShelves] = useState<Shelf[]>(() => {
+    const saved = localStorage.getItem('shelves');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>(() => {
+    const saved = localStorage.getItem('activityLogs');
+    return saved ? JSON.parse(saved) : [];
   });
 
   // Theme logic
@@ -237,6 +253,71 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const addShelf = (name: string, color: string) => {
+    setShelves(prev => {
+      const newShelves = [...prev, {
+        id: 'shelf_' + Date.now().toString(),
+        name,
+        color,
+        bookIds: [],
+        createdAt: Date.now()
+      }];
+      localStorage.setItem('shelves', JSON.stringify(newShelves));
+      return newShelves;
+    });
+  };
+
+  const deleteShelf = (id: string) => {
+    setShelves(prev => {
+      const newShelves = prev.filter(s => s.id !== id);
+      localStorage.setItem('shelves', JSON.stringify(newShelves));
+      return newShelves;
+    });
+  };
+
+  const toggleBookInShelf = (shelfId: string, bookId: string) => {
+    setShelves(prev => {
+      const newShelves = prev.map(shelf => {
+        if (shelf.id === shelfId) {
+          const hasBook = shelf.bookIds.includes(bookId);
+          return {
+            ...shelf,
+            bookIds: hasBook ? shelf.bookIds.filter(id => id !== bookId) : [...shelf.bookIds, bookId]
+          };
+        }
+        return shelf;
+      });
+      localStorage.setItem('shelves', JSON.stringify(newShelves));
+      return newShelves;
+    });
+  };
+
+  const logActivity = (type: ActivityLog['type'], count: number = 1) => {
+    setActivityLogs(prev => {
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      const existingLogIndex = prev.findIndex(log => log.date === today && log.type === type);
+      
+      let newLogs;
+      if (existingLogIndex >= 0) {
+        newLogs = [...prev];
+        newLogs[existingLogIndex] = {
+          ...newLogs[existingLogIndex],
+          count: newLogs[existingLogIndex].count + count
+        };
+      } else {
+        newLogs = [...prev, {
+          id: 'log_' + Date.now().toString(),
+          date: today,
+          type,
+          count
+        }];
+      }
+      
+      localStorage.setItem('activityLogs', JSON.stringify(newLogs));
+      return newLogs;
+    });
+  };
+
   const updateUserProfile = (profileUpdates: Partial<UserProfile>) => {
     setUserProfile(prev => {
       const newProfile = { ...prev, ...profileUpdates };
@@ -251,7 +332,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       notes,
       stats: defaultStats,
       userProfile,
+      shelves,
+      activityLogs,
       updateUserProfile,
+      addShelf,
+      deleteShelf,
+      toggleBookInShelf,
+      logActivity,
       theme,
       toggleTheme,
       addBook,

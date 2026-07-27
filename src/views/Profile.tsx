@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { User, Award, BookOpen, Target, Settings, CheckCircle2, ChevronRight, Bookmark, Pencil, Camera } from 'lucide-react';
+import { User, Award, BookOpen, Target, Settings, CheckCircle2, ChevronRight, Bookmark, Pencil, Camera, Calendar } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { motion } from 'motion/react';
 
 export function Profile() {
-  const { userProfile, updateUserProfile, books } = useAppContext();
+  const { userProfile, updateUserProfile, books, activityLogs } = useAppContext();
   const [isEditingGoal, setIsEditingGoal] = useState(false);
   const [tempGoal, setTempGoal] = useState(userProfile.yearlyGoal.toString());
 
@@ -82,6 +82,31 @@ export function Profile() {
       updateUserProfile({ yearlyGoal: goal });
     }
     setIsEditingGoal(false);
+  };
+
+  // Isı Haritası Verisi (Son 20 hafta x 7 gün = 140 gün)
+  const heatmapDays = Array.from({ length: 140 }).map((_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (139 - i));
+    const dateStr = d.toISOString().split('T')[0];
+    
+    // O güne ait aktiviteleri topla
+    const dayLogs = activityLogs.filter(log => log.date === dateStr);
+    const totalActivityCount = dayLogs.reduce((acc, log) => acc + log.count, 0);
+    
+    // Kitap eklenme tarihi veya not alınma tarihleri de aslında buraya eklenebilir ama şu an için activityLogs var
+    return {
+      date: dateStr,
+      count: totalActivityCount
+    };
+  });
+
+  const getIntensityClass = (count: number) => {
+    if (count === 0) return 'bg-stone-100 dark:bg-stone-800';
+    if (count < 3) return 'bg-amber-200 dark:bg-amber-900/40';
+    if (count < 10) return 'bg-amber-400 dark:bg-amber-700/60';
+    if (count < 30) return 'bg-amber-500 dark:bg-amber-500';
+    return 'bg-amber-600 dark:bg-amber-400';
   };
 
   return (
@@ -250,6 +275,46 @@ export function Profile() {
           </div>
         </motion.div>
       </div>
+
+      {/* Isı Haritası (Heatmap) */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="glass-panel p-6 rounded-3xl"
+      >
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+          <div>
+            <h2 className="text-sm font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest flex items-center gap-2">
+              <Calendar size={16} /> Okuma Alışkanlığı Haritası
+            </h2>
+            <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">Son 140 günlük okuma ve odaklanma aktiviteniz.</p>
+          </div>
+          <div className="flex items-center gap-2 text-xs font-medium text-stone-500 dark:text-stone-400">
+            <span>Az</span>
+            <div className="flex gap-1">
+              <div className="w-3 h-3 rounded-sm bg-stone-100 dark:bg-stone-800"></div>
+              <div className="w-3 h-3 rounded-sm bg-amber-200 dark:bg-amber-900/40"></div>
+              <div className="w-3 h-3 rounded-sm bg-amber-400 dark:bg-amber-700/60"></div>
+              <div className="w-3 h-3 rounded-sm bg-amber-500 dark:bg-amber-500"></div>
+              <div className="w-3 h-3 rounded-sm bg-amber-600 dark:bg-amber-400"></div>
+            </div>
+            <span>Çok</span>
+          </div>
+        </div>
+
+        <div className="w-full overflow-x-auto pb-4 hide-scrollbar">
+          <div className="inline-grid grid-rows-7 grid-flow-col gap-1.5">
+            {heatmapDays.map((day, i) => (
+              <div 
+                key={i} 
+                title={`${day.date}: ${day.count} aktivite`}
+                className={`w-3 h-3 md:w-4 md:h-4 rounded-sm transition-colors hover:ring-2 hover:ring-offset-1 hover:ring-amber-500 hover:ring-offset-white dark:hover:ring-offset-[#1A1E29] ${getIntensityClass(day.count)}`}
+              />
+            ))}
+          </div>
+        </div>
+      </motion.div>
 
     </div>
   );
