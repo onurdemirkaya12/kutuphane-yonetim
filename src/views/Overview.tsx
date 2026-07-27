@@ -242,7 +242,7 @@ export function Overview() {
             <motion.div variants={itemVariants} className="glass-panel anti-gravity rounded-2xl p-5 flex flex-col justify-center">
               <div className="flex justify-between items-start mb-2">
                 <div className="p-2 bg-blue-500/10 text-blue-500 rounded-lg"><BookOpen size={20} /></div>
-                <span className="text-2xl font-bold text-stone-900 dark:text-stone-100">{books.length}</span>
+                <span className="text-2xl font-bold text-stone-900 dark:text-stone-100">{books.reduce((sum, b) => sum + (b.quantity || 1), 0)}</span>
               </div>
               <p className="text-sm font-medium text-stone-500 dark:text-stone-400">Toplam Kitap</p>
             </motion.div>

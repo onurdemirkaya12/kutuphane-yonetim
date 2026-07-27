@@ -122,7 +122,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const addBook = async (bookData: Omit<Book, 'id'>) => {
     try {
-      await addDoc(collection(db, 'books'), bookData);
+      let existingBook = null;
+      if (bookData.isbn) {
+        existingBook = books.find(b => b.isbn === bookData.isbn);
+      } else {
+        existingBook = books.find(b => 
+          b.title.toLowerCase() === bookData.title.toLowerCase() && 
+          b.author.toLowerCase() === bookData.author.toLowerCase()
+        );
+      }
+
+      if (existingBook) {
+        const bookRef = doc(db, 'books', existingBook.id);
+        const newQuantity = (existingBook.quantity || 1) + 1;
+        await updateDoc(bookRef, { quantity: newQuantity });
+      } else {
+        await addDoc(collection(db, 'books'), {
+          ...bookData,
+          quantity: 1
+        });
+      }
     } catch (error) {
       console.error("Kitap eklenirken hata oluştu: ", error);
     }
@@ -147,7 +166,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
       };
       
       try {
-        await addDoc(collection(db, 'books'), bookData);
+        const existingBook = books.find(b => 
+          b.title.toLowerCase() === title.toLowerCase() && 
+          b.author.toLowerCase() === author.toLowerCase()
+        );
+
+        if (existingBook) {
+          const bookRef = doc(db, 'books', existingBook.id);
+          const newQuantity = (existingBook.quantity || 1) + 1;
+          await updateDoc(bookRef, { quantity: newQuantity });
+        } else {
+          await addDoc(collection(db, 'books'), {
+            ...bookData,
+            quantity: 1
+          });
+        }
       } catch (error) {
         console.error("Toplu kitap eklenirken hata oluştu: ", error);
       }

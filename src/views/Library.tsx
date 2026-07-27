@@ -25,6 +25,7 @@ export function Library() {
   const [editEmotion, setEditEmotion] = useState('');
   const [editPageCount, setEditPageCount] = useState<number | ''>('');
   const [editReadPages, setEditReadPages] = useState<number | ''>('');
+  const [editQuantity, setEditQuantity] = useState<number | ''>('');
   
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | Book['status']>('all');
@@ -377,7 +378,14 @@ export function Library() {
                     )}
                   </div>
                   
-                  <h3 className="font-serif font-semibold text-stone-900 dark:text-stone-100 truncate">{book.title}</h3>
+                  <h3 className="font-serif font-semibold text-stone-900 dark:text-stone-100 truncate flex items-center gap-2">
+                    <span className="truncate">{book.title}</span>
+                    {book.quantity && book.quantity > 1 && (
+                      <span className="shrink-0 text-xs font-sans font-bold text-amber-600 bg-amber-100 dark:bg-amber-900/30 dark:text-amber-500 px-1.5 py-0.5 rounded-md">
+                        x{book.quantity}
+                      </span>
+                    )}
+                  </h3>
                   <p className="text-stone-500 dark:text-stone-400 text-sm truncate">{book.author}</p>
                 </motion.div>
               );
@@ -414,7 +422,14 @@ export function Library() {
                   </div>
                   
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-serif font-semibold text-stone-900 dark:text-stone-100 truncate">{book.title}</h3>
+                    <h3 className="font-serif font-semibold text-stone-900 dark:text-stone-100 truncate flex items-center gap-2">
+                      <span className="truncate">{book.title}</span>
+                      {book.quantity && book.quantity > 1 && (
+                        <span className="shrink-0 text-xs font-sans font-bold text-amber-600 bg-amber-100 dark:bg-amber-900/30 dark:text-amber-500 px-1.5 py-0.5 rounded-md">
+                          x{book.quantity}
+                        </span>
+                      )}
+                    </h3>
                     <p className="text-stone-500 dark:text-stone-400 text-sm truncate">{book.author}</p>
                   </div>
                   
@@ -654,6 +669,7 @@ export function Library() {
                           if (editCategory) updates.category = editCategory;
                           if (editPageCount !== '') updates.pageCount = Number(editPageCount);
                           if (editReadPages !== '') updates.readPages = Number(editReadPages);
+                          if (editQuantity !== '') updates.quantity = Number(editQuantity);
                           
                           if (selectedBook.status === 'completed') {
                             if (editRating !== '') updates.rating = Number(editRating);
@@ -672,6 +688,7 @@ export function Library() {
                           setEditCategory(selectedBook.category || '');
                           setEditPageCount(selectedBook.pageCount || '');
                           setEditReadPages(selectedBook.readPages || '');
+                          setEditQuantity(selectedBook.quantity || 1);
                           setEditRating(selectedBook.rating || '');
                           setEditEmotion(selectedBook.emotion || '');
                           setIsEditing(true);
@@ -741,6 +758,16 @@ export function Library() {
                         onChange={e => setEditIsbn(e.target.value)} 
                         className="text-sm text-stone-600 dark:text-stone-300 w-full bg-transparent border-b border-stone-300 dark:border-stone-700 focus:outline-none focus:border-stone-500 pb-1"
                         placeholder="Örn: 9780140449136"
+                      />
+
+                      <label className="block text-xs font-medium text-stone-400 dark:text-stone-500 uppercase tracking-wider mb-1 mt-4">Adet (Miktar)</label>
+                      <input 
+                        type="number"
+                        min="1" 
+                        value={editQuantity} 
+                        onChange={e => setEditQuantity(e.target.value === '' ? '' : Number(e.target.value))} 
+                        className="text-sm text-stone-600 dark:text-stone-300 w-full bg-transparent border-b border-stone-300 dark:border-stone-700 focus:outline-none focus:border-stone-500 pb-1"
+                        placeholder="Örn: 1"
                       />
 
                       <div className="flex gap-4 mt-4">
