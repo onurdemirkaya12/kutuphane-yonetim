@@ -33,3 +33,10 @@ export interface ReadingStat {
   month: string;
   pagesRead: number;
 }
+
+export interface UserProfile {
+  name: string;
+  avatarUrl?: string;
+  yearlyGoal: number;
+  joinDate: number;
+}

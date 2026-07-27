@@ -1,10 +1,10 @@
 import React from 'react';
-import { LayoutDashboard, Library, PenLine, Compass, Moon, Sun } from 'lucide-react';
+import { LayoutDashboard, Library, PenLine, User, Moon, Sun } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useAppContext } from '../context/AppContext';
 import { motion } from 'motion/react';
 
-export type ViewType = 'overview' | 'library' | 'notes' | 'discover';
+export type ViewType = 'overview' | 'library' | 'notes' | 'profile';
 
 interface SidebarProps {
   currentView: ViewType;
@@ -18,7 +18,7 @@ export function Sidebar({ currentView, onChangeView }: SidebarProps) {
     { id: 'overview', label: 'Genel Bakış', icon: LayoutDashboard },
     { id: 'library', label: 'Kütüphane', icon: Library },
     { id: 'notes', label: 'Notlarım', icon: PenLine },
-    { id: 'discover', label: 'Keşfet', icon: Compass },
+    { id: 'profile', label: 'Profilim', icon: User },
   ] as const;
 
   return (

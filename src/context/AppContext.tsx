@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { collection, onSnapshot, addDoc, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { Book, Note, ReadingStat } from '../types';
+import { Book, Note, ReadingStat, UserProfile } from '../types';
 
 export type Theme = 'light' | 'dark';
 
@@ -9,7 +9,8 @@ interface AppContextType {
   books: Book[];
   notes: Note[];
   stats: ReadingStat[];
-  discoverBooks: Book[];
+  userProfile: UserProfile;
+  updateUserProfile: (profile: Partial<UserProfile>) => void;
   theme: Theme;
   toggleTheme: () => void;
   addBook: (book: Omit<Book, 'id'>) => void;
@@ -33,19 +34,20 @@ const defaultStats: ReadingStat[] = [
   { month: 'Haz', pagesRead: 500 },
 ];
 
-const mockDiscover: Book[] = [
-  { id: 'd1', title: 'Suç ve Ceza', author: 'Fyodor Dostoyevski', status: 'want-to-read', isFavorite: false, coverColor: 'bg-stone-800' },
-  { id: 'd2', title: '1984', author: 'George Orwell', status: 'want-to-read', isFavorite: false, coverColor: 'bg-zinc-700' },
-  { id: 'd3', title: 'Simyacı', author: 'Paulo Coelho', status: 'want-to-read', isFavorite: false, coverColor: 'bg-amber-700' },
-  { id: 'd4', title: 'Sefiller', author: 'Victor Hugo', status: 'want-to-read', isFavorite: false, coverColor: 'bg-red-900' },
-];
-
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [books, setBooks] = useState<Book[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [theme, setTheme] = useState<Theme>('light');
+  const [userProfile, setUserProfile] = useState<UserProfile>(() => {
+    const saved = localStorage.getItem('userProfile');
+    return saved ? JSON.parse(saved) : {
+      name: 'Kitap Kurdu',
+      yearlyGoal: 50,
+      joinDate: Date.now()
+    };
+  });
 
   // Theme logic
   useEffect(() => {
@@ -235,12 +237,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const updateUserProfile = (profileUpdates: Partial<UserProfile>) => {
+    setUserProfile(prev => {
+      const newProfile = { ...prev, ...profileUpdates };
+      localStorage.setItem('userProfile', JSON.stringify(newProfile));
+      return newProfile;
+    });
+  };
+
   return (
     <AppContext.Provider value={{
       books,
       notes,
       stats: defaultStats,
-      discoverBooks: mockDiscover,
+      userProfile,
+      updateUserProfile,
       theme,
       toggleTheme,
       addBook,

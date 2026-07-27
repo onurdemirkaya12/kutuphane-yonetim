@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, BookOpen, Clock, CheckCircle2, ChevronRight, MessageSquarePlus, X, Trash2, Edit3, Save, Search, Download, Wand2, Loader2 } from 'lucide-react';
+import { Plus, BookOpen, Clock, CheckCircle2, ChevronRight, MessageSquarePlus, X, Trash2, Edit3, Save, Search, Download, Wand2, Loader2, Heart, LayoutGrid, List, ArrowUpDown } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { AddBookModal } from '../components/AddBookModal';
 import { Book } from '../types';
 
 export function Library() {
-  const { books, updateBookStatus, updateBook, deleteBook, addNote } = useAppContext();
+  const { books, updateBookStatus, updateBook, deleteBook, addNote, toggleFavoriteBook } = useAppContext();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [noteContent, setNoteContent] = useState('');
@@ -20,10 +20,15 @@ export function Library() {
   const [editCategory, setEditCategory] = useState('');
   const [editRating, setEditRating] = useState<number | ''>('');
   const [editEmotion, setEditEmotion] = useState('');
+  const [editPageCount, setEditPageCount] = useState<number | ''>('');
+  const [editReadPages, setEditReadPages] = useState<number | ''>('');
   
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | Book['status']>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'title-asc' | 'title-desc' | 'rating-desc'>('newest');
   
   const [isAutoFetching, setIsAutoFetching] = useState(false);
   const [autoFetchProgress, setAutoFetchProgress] = useState({ current: 0, total: 0 });
@@ -42,6 +47,13 @@ export function Library() {
     const matchesStatus = statusFilter === 'all' || book.status === statusFilter;
     const matchesCategory = categoryFilter === 'all' || book.category === categoryFilter;
     return matchesSearch && matchesStatus && matchesCategory;
+  }).sort((a, b) => {
+    if (sortBy === 'newest') return (b.addedAt || Date.now()) - (a.addedAt || Date.now());
+    if (sortBy === 'oldest') return (a.addedAt || Date.now()) - (b.addedAt || Date.now());
+    if (sortBy === 'title-asc') return a.title.localeCompare(b.title);
+    if (sortBy === 'title-desc') return b.title.localeCompare(a.title);
+    if (sortBy === 'rating-desc') return (b.rating || 0) - (a.rating || 0);
+    return 0;
   });
 
   const exportToCSV = () => {
@@ -202,7 +214,7 @@ export function Library() {
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4 mb-8">
+      <div className="flex flex-col lg:flex-row gap-4 mb-8">
         <div className="relative flex-1">
           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-stone-400">
             <Search size={18} />
@@ -215,83 +227,224 @@ export function Library() {
             placeholder="Kitap veya yazar ara..."
           />
         </div>
-        <select
-          value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
-          className="px-4 py-3 bg-white dark:bg-[#1A1E29] border border-stone-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-500 dark:text-stone-200 cursor-pointer appearance-none min-w-[160px]"
-        >
-          <option value="all">Tüm Kategoriler</option>
-          {uniqueCategories.map(cat => (
-            <option key={cat} value={cat}>{cat}</option>
-          ))}
-        </select>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as any)}
-          className="px-4 py-3 bg-white dark:bg-[#1A1E29] border border-stone-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-500 dark:text-stone-200 cursor-pointer appearance-none min-w-[160px]"
-        >
-          <option value="all">Tüm Durumlar</option>
-          <option value="want-to-read">Okunacaklar</option>
-          <option value="reading">Okunanlar</option>
-          <option value="completed">Bitenler</option>
-        </select>
+        
+        <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0 hide-scrollbar flex-wrap sm:flex-nowrap">
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="px-4 py-3 bg-white dark:bg-[#1A1E29] border border-stone-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-500 dark:text-stone-200 cursor-pointer appearance-none min-w-[140px]"
+          >
+            <option value="all">Tüm Kategoriler</option>
+            {uniqueCategories.map(cat => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as any)}
+            className="px-4 py-3 bg-white dark:bg-[#1A1E29] border border-stone-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-500 dark:text-stone-200 cursor-pointer appearance-none min-w-[140px]"
+          >
+            <option value="all">Tüm Durumlar</option>
+            <option value="want-to-read">Okunacaklar</option>
+            <option value="reading">Okunanlar</option>
+            <option value="completed">Bitenler</option>
+          </select>
+          <div className="relative min-w-[140px]">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-stone-400">
+              <ArrowUpDown size={16} />
+            </div>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="w-full pl-9 pr-4 py-3 bg-white dark:bg-[#1A1E29] border border-stone-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-500 dark:text-stone-200 cursor-pointer appearance-none"
+            >
+              <option value="newest">En Yeniler</option>
+              <option value="oldest">En Eskiler</option>
+              <option value="title-asc">İsim (A-Z)</option>
+              <option value="title-desc">İsim (Z-A)</option>
+              <option value="rating-desc">En Yüksek Puan</option>
+            </select>
+          </div>
+          
+          <div className="flex bg-white dark:bg-[#1A1E29] border border-stone-200 dark:border-white/10 rounded-xl p-1 ml-auto shrink-0">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`p-2 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-stone-100 dark:bg-white/10 text-stone-900 dark:text-white' : 'text-stone-400 hover:text-stone-600 dark:hover:text-stone-300'}`}
+              title="Izgara Görünümü"
+            >
+              <LayoutGrid size={18} />
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`p-2 rounded-lg transition-colors ${viewMode === 'list' ? 'bg-stone-100 dark:bg-white/10 text-stone-900 dark:text-white' : 'text-stone-400 hover:text-stone-600 dark:hover:text-stone-300'}`}
+              title="Liste Görünümü"
+            >
+              <List size={18} />
+            </button>
+          </div>
+        </div>
       </div>
 
-      <motion.div 
-        layout
-        className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"
-      >
-        <AnimatePresence>
-          {filteredBooks.map((book) => {
-            const StatusIcon = statusMap[book.status].icon;
-            
-            return (
-              <motion.div
-                layoutId={`book-${book.id}`}
-                key={book.id}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                whileHover={{ y: -8 }}
-                onClick={() => setSelectedBook(book)}
-                className="anti-gravity cursor-pointer group flex flex-col"
-              >
-                <div className="relative aspect-[2/3] rounded-xl shadow-md overflow-hidden mb-4 bg-stone-200 dark:bg-stone-800">
-                  {book.coverImageUrl ? (
-                    <img 
-                      src={book.coverImageUrl} 
-                      alt={book.title} 
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = 'none';
-                        (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+      {viewMode === 'grid' ? (
+        <motion.div 
+          layout
+          className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"
+        >
+          <AnimatePresence>
+            {filteredBooks.map((book) => {
+              const StatusIcon = statusMap[book.status].icon;
+              const progress = book.pageCount && book.readPages ? Math.round((book.readPages / book.pageCount) * 100) : 0;
+              
+              return (
+                <motion.div
+                  layoutId={`book-${book.id}`}
+                  key={book.id}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  whileHover={{ y: -8 }}
+                  onClick={() => setSelectedBook(book)}
+                  className="anti-gravity cursor-pointer group flex flex-col"
+                >
+                  <div className="relative aspect-[2/3] rounded-xl shadow-md overflow-hidden mb-4 bg-stone-200 dark:bg-stone-800">
+                    {book.coverImageUrl ? (
+                      <img 
+                        src={book.coverImageUrl} 
+                        alt={book.title} 
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                          (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                        }}
+                      />
+                    ) : null}
+                    <div className={`w-full h-full ${book.coverColor || 'bg-stone-800'} flex items-center justify-center p-4 text-center ${book.coverImageUrl ? 'hidden' : ''}`}>
+                      <span className="font-serif font-medium text-white/50 text-sm">{book.title}</span>
+                    </div>
+                    
+                    {/* Hover Overlay */}
+                    <div className="absolute inset-0 bg-stone-900/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center backdrop-blur-sm">
+                      <span className="text-white font-medium flex items-center gap-2">
+                        Detaylar <ChevronRight size={16} />
+                      </span>
+                    </div>
+                    
+                    {/* Status Badge */}
+                    <div className="absolute top-2 right-2 bg-white/90 dark:bg-stone-900/90 backdrop-blur p-1.5 rounded-lg shadow-sm">
+                      <StatusIcon size={14} className={statusMap[book.status].color} />
+                    </div>
+
+                    {/* Favorite Toggle Button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFavoriteBook(book.id);
                       }}
-                    />
-                  ) : null}
-                  <div className={`w-full h-full ${book.coverColor || 'bg-stone-800'} flex items-center justify-center p-4 text-center ${book.coverImageUrl ? 'hidden' : ''}`}>
-                    <span className="font-serif font-medium text-white/50 text-sm">{book.title}</span>
+                      className={`absolute top-2 left-2 p-1.5 rounded-lg shadow-sm backdrop-blur transition-all opacity-0 group-hover:opacity-100 ${book.isFavorite ? 'bg-red-500/90 text-white opacity-100' : 'bg-white/90 dark:bg-stone-900/90 text-stone-400 hover:text-red-500'}`}
+                    >
+                      <Heart size={14} className={book.isFavorite ? "fill-current" : ""} />
+                    </button>
+                    
+                    {/* Progress Bar for Reading */}
+                    {book.status === 'reading' && book.pageCount && (
+                      <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-black/20">
+                        <div 
+                          className="h-full bg-blue-500"
+                          style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
+                        />
+                      </div>
+                    )}
                   </div>
                   
-                  {/* Hover Overlay */}
-                  <div className="absolute inset-0 bg-stone-900/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center backdrop-blur-sm">
-                    <span className="text-white font-medium flex items-center gap-2">
-                      Detaylar <ChevronRight size={16} />
-                    </span>
+                  <h3 className="font-serif font-semibold text-stone-900 dark:text-stone-100 truncate">{book.title}</h3>
+                  <p className="text-stone-500 dark:text-stone-400 text-sm truncate">{book.author}</p>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        </motion.div>
+      ) : (
+        <motion.div layout className="flex flex-col gap-3">
+          <AnimatePresence>
+            {filteredBooks.map((book) => {
+              const StatusIcon = statusMap[book.status].icon;
+              const progress = book.pageCount && book.readPages ? Math.round((book.readPages / book.pageCount) * 100) : 0;
+              
+              return (
+                <motion.div
+                  layoutId={`book-${book.id}`}
+                  key={book.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  onClick={() => setSelectedBook(book)}
+                  className="anti-gravity cursor-pointer group flex items-center gap-4 bg-white dark:bg-[#1A1E29] p-3 rounded-2xl border border-stone-200 dark:border-white/5 hover:border-stone-300 dark:hover:border-white/20 transition-all"
+                >
+                  <div className="w-12 h-16 shrink-0 rounded-lg shadow-sm overflow-hidden bg-stone-200 dark:bg-stone-800 relative">
+                    {book.coverImageUrl ? (
+                      <img 
+                        src={book.coverImageUrl} 
+                        alt={book.title} 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className={`w-full h-full ${book.coverColor || 'bg-stone-800'}`} />
+                    )}
                   </div>
                   
-                  {/* Status Badge */}
-                  <div className="absolute top-2 right-2 bg-white/90 dark:bg-stone-900/90 backdrop-blur p-1.5 rounded-lg shadow-sm">
-                    <StatusIcon size={14} className={statusMap[book.status].color} />
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-serif font-semibold text-stone-900 dark:text-stone-100 truncate">{book.title}</h3>
+                    <p className="text-stone-500 dark:text-stone-400 text-sm truncate">{book.author}</p>
                   </div>
-                </div>
-                
-                <h3 className="font-serif font-semibold text-stone-900 dark:text-stone-100 truncate">{book.title}</h3>
-                <p className="text-stone-500 dark:text-stone-400 text-sm truncate">{book.author}</p>
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
-      </motion.div>
+                  
+                  <div className="hidden md:flex flex-col items-start w-32 shrink-0">
+                    {book.category && (
+                      <span className="inline-block bg-stone-100 dark:bg-white/5 text-stone-600 dark:text-stone-300 px-2.5 py-1 rounded-md text-xs font-medium border border-stone-200 dark:border-white/10 truncate max-w-full">
+                        {book.category}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="hidden sm:flex flex-col items-end justify-center w-32 shrink-0 gap-1.5">
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-stone-600 dark:text-stone-400">
+                      <StatusIcon size={14} className={statusMap[book.status].color} />
+                      {statusMap[book.status].label}
+                    </div>
+                    {book.status === 'reading' && book.pageCount && (
+                      <div className="w-full flex items-center gap-2">
+                        <div className="flex-1 h-1.5 bg-stone-200 dark:bg-stone-700 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-blue-500 rounded-full"
+                            style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
+                          />
+                        </div>
+                        <span className="text-[10px] text-stone-500">{progress}%</span>
+                      </div>
+                    )}
+                    {book.status === 'completed' && book.rating && (
+                      <div className="flex items-center gap-1 text-xs text-amber-500 font-medium">
+                        ⭐ {book.rating}/10
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="shrink-0 pl-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFavoriteBook(book.id);
+                      }}
+                      className={`p-2 rounded-full transition-colors ${book.isFavorite ? 'text-red-500 bg-red-50 dark:bg-red-500/10' : 'text-stone-400 hover:text-red-500 hover:bg-stone-100 dark:hover:bg-white/5'}`}
+                    >
+                      <Heart size={18} className={book.isFavorite ? "fill-current" : ""} />
+                    </button>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        </motion.div>
+      )}
 
       {books.length === 0 && (
         <div className="py-20 text-center flex flex-col items-center justify-center text-stone-400">
@@ -368,6 +521,8 @@ export function Library() {
                           if (editCoverUrl) updates.coverImageUrl = editCoverUrl;
                           if (editIsbn) updates.isbn = editIsbn;
                           if (editCategory) updates.category = editCategory;
+                          if (editPageCount !== '') updates.pageCount = Number(editPageCount);
+                          if (editReadPages !== '') updates.readPages = Number(editReadPages);
                           
                           if (selectedBook.status === 'completed') {
                             if (editRating !== '') updates.rating = Number(editRating);
@@ -384,6 +539,8 @@ export function Library() {
                           setEditCoverUrl(selectedBook.coverImageUrl || '');
                           setEditIsbn(selectedBook.isbn || '');
                           setEditCategory(selectedBook.category || '');
+                          setEditPageCount(selectedBook.pageCount || '');
+                          setEditReadPages(selectedBook.readPages || '');
                           setEditRating(selectedBook.rating || '');
                           setEditEmotion(selectedBook.emotion || '');
                           setIsEditing(true);
@@ -454,6 +611,31 @@ export function Library() {
                         className="text-sm text-stone-600 dark:text-stone-300 w-full bg-transparent border-b border-stone-300 dark:border-stone-700 focus:outline-none focus:border-stone-500 pb-1"
                         placeholder="Örn: 9780140449136"
                       />
+
+                      <div className="flex gap-4 mt-4">
+                        <div className="flex-1">
+                          <label className="block text-xs font-medium text-stone-400 dark:text-stone-500 uppercase tracking-wider mb-1">Toplam Sayfa</label>
+                          <input 
+                            type="number" 
+                            value={editPageCount} 
+                            onChange={e => setEditPageCount(e.target.value === '' ? '' : Number(e.target.value))} 
+                            className="text-sm text-stone-600 dark:text-stone-300 w-full bg-transparent border-b border-stone-300 dark:border-stone-700 focus:outline-none focus:border-stone-500 pb-1"
+                            placeholder="Örn: 350"
+                          />
+                        </div>
+                        {selectedBook.status === 'reading' && (
+                          <div className="flex-1">
+                            <label className="block text-xs font-medium text-blue-600 dark:text-blue-500 uppercase tracking-wider mb-1">Okunan Sayfa</label>
+                            <input 
+                              type="number" 
+                              value={editReadPages} 
+                              onChange={e => setEditReadPages(e.target.value === '' ? '' : Number(e.target.value))} 
+                              className="text-sm text-stone-600 dark:text-stone-300 w-full bg-transparent border-b border-stone-300 dark:border-stone-700 focus:outline-none focus:border-stone-500 pb-1"
+                              placeholder="Örn: 120"
+                            />
+                          </div>
+                        )}
+                      </div>
 
                       {selectedBook.status === 'completed' && (
                         <div className="flex gap-4 mt-4">

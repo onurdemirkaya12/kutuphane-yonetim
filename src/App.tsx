@@ -4,7 +4,7 @@ import { AppProvider } from './context/AppContext';
 import { Overview } from './views/Overview';
 import { Library } from './views/Library';
 import { Notes } from './views/Notes';
-import { Discover } from './views/Discover';
+import { Profile } from './views/Profile';
 import { AnimatePresence, motion } from 'motion/react';
 
 function AppContent() {
@@ -27,7 +27,7 @@ function AppContent() {
             {currentView === 'overview' && <Overview />}
             {currentView === 'library' && <Library />}
             {currentView === 'notes' && <Notes />}
-            {currentView === 'discover' && <Discover />}
+            {currentView === 'profile' && <Profile />}
           </motion.div>
         </AnimatePresence>
       </main>
