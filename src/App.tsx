@@ -12,10 +12,10 @@ function AppContent() {
   const [currentView, setCurrentView] = React.useState<ViewType>('overview');
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-[100dvh] overflow-hidden">
       <Sidebar currentView={currentView} onChangeView={setCurrentView} />
       
-      <main className="flex-1 overflow-y-auto relative bg-transparent pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
+      <main className="flex-1 overflow-y-auto relative bg-transparent pt-[env(safe-area-inset-top)] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentView}

@@ -110,7 +110,7 @@ export function Profile() {
   };
 
   return (
-    <div className="p-8 max-w-5xl mx-auto min-h-full space-y-8 pb-20">
+    <div className="p-4 md:p-8 pt-6 md:pt-8 max-w-5xl mx-auto min-h-full space-y-6 md:space-y-8 pb-24 md:pb-8">
       
       {/* Üst Profil Kartı */}
       <motion.div 
@@ -146,7 +146,7 @@ export function Profile() {
             {totalCompletedCount < 5 ? 'Acemi Okur' : totalCompletedCount < 15 ? 'Kitap Kurdu' : 'Bilge Okuyucu'} • {new Date(userProfile.joinDate).getFullYear()} yılından beri üye
           </p>
 
-          <div className="bg-white/50 dark:bg-[#1A1E29]/50 rounded-2xl p-4 flex items-center gap-6 shadow-sm border border-stone-200/50 dark:border-white/5">
+          <div className="bg-white/50 dark:bg-[#1A1E29]/50 rounded-2xl p-4 flex flex-col sm:flex-row items-center gap-4 sm:gap-6 shadow-sm border border-stone-200/50 dark:border-white/5">
             {/* Circular Progress */}
             <div className="relative w-24 h-24 shrink-0">
               <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
@@ -169,35 +169,35 @@ export function Profile() {
             </div>
 
             {/* Goal Text & Edit */}
-            <div className="flex-1">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-stone-500 dark:text-stone-400 uppercase tracking-wider">Yıllık Okuma Hedefi</span>
+            <div className="flex-1 w-full min-w-0 flex flex-col items-center sm:items-start text-center sm:text-left">
+              <div className="flex items-center justify-center sm:justify-between w-full mb-2 gap-2">
+                <span className="text-[11px] sm:text-sm font-bold sm:font-medium text-stone-500 dark:text-stone-400 uppercase tracking-wider truncate">Yıllık Okuma Hedefi</span>
                 <button 
                   onClick={() => setIsEditingGoal(!isEditingGoal)}
-                  className="text-amber-600 dark:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10 p-1.5 rounded-lg transition-colors"
+                  className="text-amber-600 dark:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10 p-1.5 rounded-lg transition-colors shrink-0"
                 >
                   <Settings size={16} />
                 </button>
               </div>
               
               {isEditingGoal ? (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center justify-center sm:justify-start gap-2 w-full">
                   <input
                     type="number"
                     value={tempGoal}
                     onChange={(e) => setTempGoal(e.target.value)}
-                    className="w-20 bg-white dark:bg-stone-800 border border-stone-300 dark:border-stone-600 rounded-lg px-3 py-1.5 text-stone-800 dark:text-stone-200 focus:outline-none focus:ring-2 focus:ring-amber-500 font-medium"
+                    className="w-16 sm:w-20 bg-white dark:bg-stone-800 border border-stone-300 dark:border-stone-600 rounded-lg px-2 sm:px-3 py-1.5 text-stone-800 dark:text-stone-200 focus:outline-none focus:ring-2 focus:ring-amber-500 font-medium shrink-0"
                     min="1"
                   />
-                  <button onClick={handleSaveGoal} className="bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">Kaydet</button>
+                  <button onClick={handleSaveGoal} className="bg-amber-500 hover:bg-amber-600 text-white px-2 sm:px-3 py-1.5 rounded-lg text-sm font-medium transition-colors shrink-0">Kaydet</button>
                 </div>
               ) : (
-                <div className="flex items-baseline gap-2">
+                <div className="flex items-baseline justify-center sm:justify-start gap-2 w-full">
                   <span className="text-3xl font-bold text-stone-900 dark:text-white">{totalCompletedCount}</span>
                   <span className="text-stone-500 dark:text-stone-400 font-medium">/ {userProfile.yearlyGoal} kitap</span>
                 </div>
               )}
-              <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">Bu yıl hedefinin {totalCompletedCount} kitabını tamamladın.</p>
+              <p className="text-xs text-stone-400 dark:text-stone-500 mt-2 sm:mt-1">Bu yıl hedefinin {totalCompletedCount} kitabını tamamladın.</p>
             </div>
           </div>
         </div>

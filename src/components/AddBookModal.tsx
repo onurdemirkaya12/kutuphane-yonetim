@@ -221,17 +221,17 @@ export function AddBookModal({ isOpen, onClose }: AddBookModalProps) {
                           handleIsbnSearch();
                         }
                       }}
-                      className="flex-1 px-4 py-2 bg-white dark:bg-[#0B0C10] border border-stone-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-500 dark:text-stone-200"
+                      className="flex-1 min-w-0 px-4 py-2 bg-white dark:bg-[#0B0C10] border border-stone-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-500 dark:text-stone-200"
                       placeholder="Örn: 9780140449136"
                     />
                     <button
                       type="button"
                       onClick={() => handleIsbnSearch()}
                       disabled={isSearchingIsbn || !isbn.trim()}
-                      className="flex items-center gap-2 bg-stone-200 dark:bg-white/10 text-stone-700 dark:text-stone-200 px-4 py-2 rounded-xl hover:bg-stone-300 dark:hover:bg-white/20 transition-colors disabled:opacity-50"
+                      className="flex items-center justify-center gap-2 bg-stone-200 dark:bg-white/10 text-stone-700 dark:text-stone-200 px-3 sm:px-4 py-2 rounded-xl hover:bg-stone-300 dark:hover:bg-white/20 transition-colors disabled:opacity-50 shrink-0"
                     >
-                      {isSearchingIsbn ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />}
-                      Bul
+                      {isSearchingIsbn ? <Loader2 size={18} className="animate-spin shrink-0" /> : <Search size={18} className="shrink-0" />}
+                      <span>Bul</span>
                     </button>
                   </div>
                 </div>
