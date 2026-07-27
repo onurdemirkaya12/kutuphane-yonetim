@@ -161,9 +161,9 @@ export function AddBookModal({ isOpen, onClose }: AddBookModalProps) {
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg bg-white dark:bg-[#1A1E29] rounded-2xl shadow-2xl z-50 overflow-hidden border border-stone-200 dark:border-white/10 flex flex-col max-h-[90vh]"
+            className="fixed inset-0 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 w-full md:max-w-lg bg-white dark:bg-[#1A1E29] md:rounded-2xl shadow-2xl z-50 overflow-hidden border-0 md:border border-stone-200 dark:border-white/10 flex flex-col h-full md:max-h-[90vh]"
           >
-            <div className="p-6 border-b border-stone-100 dark:border-white/5 flex items-center justify-between bg-stone-50/50 dark:bg-[#0B0C10]/50 shrink-0">
+            <div className="p-4 md:p-6 border-b border-stone-100 dark:border-white/5 flex items-center justify-between bg-stone-50/50 dark:bg-[#0B0C10]/50 shrink-0 mt-[env(safe-area-inset-top)]">
               <h2 className="text-xl font-serif font-semibold text-stone-900 dark:text-stone-100 flex items-center gap-2">
                 <BookOpen size={20} className="text-amber-500" />
                 Kitap Ekle

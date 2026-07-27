@@ -15,7 +15,7 @@ function AppContent() {
     <div className="flex h-screen overflow-hidden">
       <Sidebar currentView={currentView} onChangeView={setCurrentView} />
       
-      <main className="flex-1 overflow-y-auto relative bg-transparent">
+      <main className="flex-1 overflow-y-auto relative bg-transparent pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentView}

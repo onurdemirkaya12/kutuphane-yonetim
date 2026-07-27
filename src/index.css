@@ -9,7 +9,18 @@
 @layer base {
   body {
     @apply bg-stone-50 text-stone-900 transition-colors duration-500 ease-in-out;
+    overscroll-behavior-y: none; /* Prevent pull-to-refresh on mobile */
+    -webkit-user-select: none; /* Prevent text selection on iOS */
+    user-select: none;
+    -webkit-tap-highlight-color: transparent; /* Remove blue highlight on tap */
   }
+  
+  /* Allow text selection in inputs and textareas */
+  input, textarea, p, h1, h2, h3, h4, h5, h6, span {
+    -webkit-user-select: auto;
+    user-select: auto;
+  }
+
   .dark body {
     @apply bg-[#0B0C10] text-stone-300;
   }

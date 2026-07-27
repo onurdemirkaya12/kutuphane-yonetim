@@ -84,7 +84,7 @@ export function FocusTimer() {
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
             onClick={() => setIsOpen(true)}
-            className="fixed bottom-6 right-6 w-14 h-14 bg-amber-500 text-white rounded-full shadow-lg shadow-amber-500/20 flex items-center justify-center hover:bg-amber-600 hover:scale-105 transition-all z-40 group"
+            className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] md:bottom-6 right-4 md:right-6 w-14 h-14 bg-amber-500 text-white rounded-full shadow-lg shadow-amber-500/20 flex items-center justify-center hover:bg-amber-600 hover:scale-105 transition-all z-40 group"
             title="Odak Modu"
           >
             {isActive ? (
@@ -117,7 +117,7 @@ export function FocusTimer() {
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-6 right-6 w-80 bg-white dark:bg-[#1A1E29] rounded-3xl shadow-2xl border border-stone-200 dark:border-white/10 overflow-hidden z-50"
+            className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] md:bottom-6 right-4 md:right-6 w-[calc(100vw-2rem)] md:w-80 bg-white dark:bg-[#1A1E29] rounded-3xl shadow-2xl border border-stone-200 dark:border-white/10 overflow-hidden z-50"
           >
             <div className="p-4 border-b border-stone-100 dark:border-white/5 flex items-center justify-between bg-stone-50/50 dark:bg-black/20">
               <h3 className="font-serif font-medium flex items-center gap-2 text-stone-900 dark:text-stone-100">
