@@ -29,6 +29,7 @@ interface AppContextType {
   deleteBook: (id: string) => void;
   updateNote: (id: string, content: string) => void;
   deleteNote: (id: string) => void;
+  mergeDuplicates: () => Promise<void>;
 }
 
 const defaultStats: ReadingStat[] = [
@@ -359,6 +360,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const mergeDuplicates = async () => {
+    const { deleteDoc } = await import('firebase/firestore');
+    const groups = new Map<string, Book[]>();
+    
+    books.forEach(book => {
+      const key = book.isbn ? book.isbn : `${book.title.toLowerCase()}_${book.author.toLowerCase()}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(book);
+    });
+
+    for (const group of groups.values()) {
+      if (group.length > 1) {
+        const sorted = [...group].sort((a, b) => (a.addedAt || 0) - (b.addedAt || 0));
+        const primary = sorted[0];
+        const duplicates = sorted.slice(1);
+        
+        const totalQuantity = group.reduce((sum, b) => sum + (b.quantity || 1), 0);
+        
+        const bookRef = doc(db, 'books', primary.id);
+        await updateDoc(bookRef, { quantity: totalQuantity });
+        
+        for (const dup of duplicates) {
+          const dupRef = doc(db, 'books', dup.id);
+          await deleteDoc(dupRef);
+        }
+      }
+    }
+  };
+
   return (
     <AppContext.Provider value={{
       books,
@@ -383,7 +413,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       updateBook,
       deleteBook,
       updateNote,
-      deleteNote
+      deleteNote,
+      mergeDuplicates
     }}>
       {children}
     </AppContext.Provider>

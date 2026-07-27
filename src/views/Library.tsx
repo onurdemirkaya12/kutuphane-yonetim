@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, BookOpen, Clock, CheckCircle2, ChevronRight, MessageSquarePlus, X, Trash2, Edit3, Save, Search, Download, Wand2, Loader2, Heart, LayoutGrid, List, ArrowUpDown, BookmarkPlus, FolderPlus } from 'lucide-react';
+import { Plus, BookOpen, Clock, CheckCircle2, ChevronRight, MessageSquarePlus, X, Trash2, Edit3, Save, Search, Download, Wand2, Loader2, Heart, LayoutGrid, List, ArrowUpDown, BookmarkPlus, FolderPlus, Copy } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { AddBookModal } from '../components/AddBookModal';
 import { Book, Shelf } from '../types';
 
 export function Library() {
-  const { books, shelves, addShelf, deleteShelf, toggleBookInShelf, updateBookStatus, updateBook, deleteBook, addNote, toggleFavoriteBook } = useAppContext();
+  const { books, shelves, addShelf, deleteShelf, toggleBookInShelf, updateBookStatus, updateBook, deleteBook, addNote, toggleFavoriteBook, mergeDuplicates } = useAppContext();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isMerging, setIsMerging] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'shelves'>('all');
   const [newShelfName, setNewShelfName] = useState('');
   const [isCreatingShelf, setIsCreatingShelf] = useState(false);
@@ -206,6 +207,29 @@ export function Library() {
             <span className="hidden sm:inline">
               {isAutoFetching ? `${autoFetchProgress.current}/${autoFetchProgress.total} Bulunuyor...` : 'Otomatik Kategori Bul'}
             </span>
+          </button>
+          
+          <button
+            onClick={async () => {
+              if (window.confirm('Bu işlem aynı isme sahip eski kayıtlı kitapları birleştirip adet (miktar) olarak sayacaktır. Devam etmek istiyor musunuz?')) {
+                setIsMerging(true);
+                try {
+                  await mergeDuplicates();
+                  alert('Eski kitaplarınız başarıyla birleştirildi!');
+                } catch (e) {
+                  alert('Hata oluştu.');
+                  console.error(e);
+                } finally {
+                  setIsMerging(false);
+                }
+              }
+            }}
+            disabled={isMerging}
+            className="anti-gravity flex items-center gap-2 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-4 py-3 rounded-xl font-medium hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors disabled:opacity-50"
+            title="Yinelenenleri Birleştir"
+          >
+            {isMerging ? <Loader2 size={20} className="animate-spin" /> : <Copy size={20} />}
+            <span className="hidden sm:inline">Birleştir</span>
           </button>
           <button
             onClick={() => setIsAddModalOpen(true)}
