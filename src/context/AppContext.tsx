@@ -446,6 +446,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       user,
       authLoading,
       logout,
+      viewingUserId,
+      setViewingUserId,
       books,
       notes,
       stats: defaultStats,
