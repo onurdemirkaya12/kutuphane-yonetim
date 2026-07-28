@@ -19,6 +19,7 @@ export interface Book {
   rating?: number; // 1-10
   emotion?: string; // Emotion tag (e.g., "Sarsıcı", "İlham Verici")
   quantity?: number; // Aynı kitaptan kaç adet olduğunu tutmak için
+  itemType?: 'book' | 'magazine' | 'comic'; // Kayıt tipi (eski kayıtlar undefined kalabilir, book sayılacak)
 }
 
 export interface Note {

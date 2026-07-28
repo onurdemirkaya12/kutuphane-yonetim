@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, BookOpen, Clock, CheckCircle2, ChevronRight, MessageSquarePlus, X, Trash2, Edit3, Save, Search, Download, Wand2, Loader2, Heart, LayoutGrid, List, ArrowUpDown, BookmarkPlus, FolderPlus, Copy } from 'lucide-react';
+import { Plus, BookOpen, Clock, CheckCircle2, ChevronRight, MessageSquarePlus, X, Trash2, Edit3, Save, Search, Download, Wand2, Loader2, Heart, LayoutGrid, List, ArrowUpDown, BookmarkPlus, FolderPlus, Copy, Newspaper, Image as ImageIcon } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { AddBookModal } from '../components/AddBookModal';
 import { Book, Shelf } from '../types';
@@ -31,6 +31,7 @@ export function Library() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | Book['status']>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'book' | 'magazine' | 'comic'>('all');
   
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'title-asc' | 'title-desc' | 'rating-desc'>('newest');
@@ -51,7 +52,8 @@ export function Library() {
                           book.author.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || book.status === statusFilter;
     const matchesCategory = categoryFilter === 'all' || book.category === categoryFilter;
-    return matchesSearch && matchesStatus && matchesCategory;
+    const matchesType = typeFilter === 'all' || (book.itemType || 'book') === typeFilter;
+    return matchesSearch && matchesStatus && matchesCategory && matchesType;
   }).sort((a, b) => {
     if (sortBy === 'newest') return (b.addedAt || Date.now()) - (a.addedAt || Date.now());
     if (sortBy === 'oldest') return (a.addedAt || Date.now()) - (b.addedAt || Date.now());
@@ -65,11 +67,13 @@ export function Library() {
     // UTF-8 BOM ekliyoruz ki Excel Türkçe karakterleri (ş,ğ,ü vb.) sorunsuz okusun
     const bom = '\uFEFF';
     // Türkçe Windows ve Excel varsayılan olarak noktalı virgül (;) ayırıcısını kullanır
-    const headers = ['ISBN Numarası', 'Kitap Adı', 'Yazar'];
+    const headers = ['Tür', 'ISBN/ISSN Numarası', 'Yayın Adı', 'Yazar'];
     
     const rows = books.flatMap(book => {
       const quantity = book.quantity || 1;
+      const typeLabel = book.itemType === 'magazine' ? 'Dergi' : book.itemType === 'comic' ? 'Çizgi Roman' : 'Kitap';
       const row = [
+        `"${typeLabel}"`,
         `"${book.isbn || ''}"`,
         `"${book.title.replace(/"/g, '""')}"`,
         `"${book.author.replace(/"/g, '""')}"`
@@ -280,6 +284,16 @@ export function Library() {
         
         <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0 hide-scrollbar flex-wrap sm:flex-nowrap">
           <select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value as any)}
+            className="px-4 py-3 bg-white dark:bg-[#1A1E29] border border-stone-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-500 dark:text-stone-200 cursor-pointer appearance-none min-w-[140px]"
+          >
+            <option value="all">Tüm Türler</option>
+            <option value="book">Kitaplar</option>
+            <option value="magazine">Dergiler</option>
+            <option value="comic">Çizgi Romanlar</option>
+          </select>
+          <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
             className="px-4 py-3 bg-white dark:bg-[#1A1E29] border border-stone-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-500 dark:text-stone-200 cursor-pointer appearance-none min-w-[140px]"
@@ -384,6 +398,18 @@ export function Library() {
                       <StatusIcon size={14} className={statusMap[book.status].color} />
                     </div>
 
+                    {/* Item Type Badge */}
+                    {book.itemType === 'magazine' && (
+                      <div className="absolute bottom-2 left-2 bg-purple-500/90 text-white backdrop-blur p-1.5 rounded-lg shadow-sm z-10" title="Dergi">
+                        <Newspaper size={14} />
+                      </div>
+                    )}
+                    {book.itemType === 'comic' && (
+                      <div className="absolute bottom-2 left-2 bg-pink-500/90 text-white backdrop-blur p-1.5 rounded-lg shadow-sm z-10" title="Çizgi Roman">
+                        <ImageIcon size={14} />
+                      </div>
+                    )}
+
                     {/* Favorite Toggle Button */}
                     <button
                       onClick={(e) => {
@@ -462,6 +488,9 @@ export function Library() {
                   </div>
                   
                   <div className="hidden md:flex flex-col items-start w-32 shrink-0">
+                    <div className="flex items-center gap-1 mb-1 text-xs text-stone-500 dark:text-stone-400">
+                      {book.itemType === 'magazine' ? <><Newspaper size={12} /> Dergi</> : book.itemType === 'comic' ? <><ImageIcon size={12} /> Çizgi Roman</> : <><BookOpen size={12} /> Kitap</>}
+                    </div>
                     {book.category && (
                       <span className="inline-block bg-stone-100 dark:bg-white/5 text-stone-600 dark:text-stone-300 px-2.5 py-1 rounded-md text-xs font-medium border border-stone-200 dark:border-white/10 truncate max-w-full">
                         {book.category}

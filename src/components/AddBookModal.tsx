@@ -20,6 +20,7 @@ export function AddBookModal({ isOpen, onClose }: AddBookModalProps) {
   const [description, setDescription] = useState('');
   const [coverImageUrl, setCoverImageUrl] = useState('');
   const [category, setCategory] = useState('');
+  const [itemType, setItemType] = useState<'book' | 'magazine' | 'comic'>('book');
   const [isSearchingIsbn, setIsSearchingIsbn] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isBulkMode, setIsBulkMode] = useState(false);
@@ -84,7 +85,8 @@ export function AddBookModal({ isOpen, onClose }: AddBookModalProps) {
             ...(foundBook.description && { description: foundBook.description }),
             ...(foundBook.category && { category: foundBook.category }),
             ...(foundBook.coverImageUrl && { coverImageUrl: foundBook.coverImageUrl }),
-            isbn: cleanIsbn
+            isbn: cleanIsbn,
+            itemType
           };
           addBook(bookPayload);
           setScannedBooks(prev => [bookPayload, ...prev]);
@@ -122,7 +124,8 @@ export function AddBookModal({ isOpen, onClose }: AddBookModalProps) {
       isFavorite: false,
       coverColor: randomColor,
       readPages: 0,
-      addedAt: Date.now()
+      addedAt: Date.now(),
+      itemType
     };
 
     if (pageCount) bookPayload.pageCount = parseInt(pageCount, 10);
@@ -176,6 +179,32 @@ export function AddBookModal({ isOpen, onClose }: AddBookModalProps) {
               </button>
             </div>
 
+            <div className="px-6 pt-4 border-b border-stone-100 dark:border-white/5 bg-stone-50/50 dark:bg-[#0B0C10]/50 shrink-0">
+              <div className="flex gap-2 mb-4">
+                <button
+                  type="button"
+                  onClick={() => setItemType('book')}
+                  className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${itemType === 'book' ? 'bg-amber-500 text-white shadow-sm' : 'bg-stone-200 dark:bg-[#151820] text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'}`}
+                >
+                  Kitap
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setItemType('magazine')}
+                  className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${itemType === 'magazine' ? 'bg-amber-500 text-white shadow-sm' : 'bg-stone-200 dark:bg-[#151820] text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'}`}
+                >
+                  Dergi
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setItemType('comic')}
+                  className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${itemType === 'comic' ? 'bg-amber-500 text-white shadow-sm' : 'bg-stone-200 dark:bg-[#151820] text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'}`}
+                >
+                  Çizgi Roman
+                </button>
+              </div>
+            </div>
+
             <div className="p-6 overflow-y-auto">
               <div className="flex bg-stone-100 dark:bg-[#151820] p-1 rounded-xl mb-6">
                 <button
@@ -199,7 +228,7 @@ export function AddBookModal({ isOpen, onClose }: AddBookModalProps) {
               <div className="mb-6 p-4 bg-stone-50 dark:bg-[#151820] rounded-xl border border-stone-200 dark:border-white/5 space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-2">
-                    {isBulkMode ? 'Kitapları Arka Arkaya Tarayın' : 'ISBN ile Otomatik Doldur'}
+                    {isBulkMode ? `${itemType === 'magazine' ? 'Dergileri' : itemType === 'comic' ? 'Çizgi Romanları' : 'Kitapları'} Arka Arkaya Tarayın` : `${itemType === 'magazine' ? 'ISSN' : itemType === 'comic' ? 'ISBN / Barkod' : 'ISBN'} ile Otomatik Doldur`}
                   </label>
                   <div className="flex gap-2">
                     <button
@@ -222,7 +251,7 @@ export function AddBookModal({ isOpen, onClose }: AddBookModalProps) {
                         }
                       }}
                       className="flex-1 min-w-0 px-4 py-2 bg-white dark:bg-[#0B0C10] border border-stone-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-500 dark:text-stone-200"
-                      placeholder="Örn: 9780140449136"
+                      placeholder={itemType === 'magazine' ? 'Örn: 1234-5678' : 'Örn: 9780140449136'}
                     />
                     <button
                       type="button"
@@ -254,7 +283,7 @@ export function AddBookModal({ isOpen, onClose }: AddBookModalProps) {
               {!isBulkMode ? (
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1">Kitap Adı *</label>
+                    <label className="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1">{itemType === 'magazine' ? 'Dergi Adı' : itemType === 'comic' ? 'Çizgi Roman Adı' : 'Kitap Adı'} *</label>
                     <input
                       type="text"
                       required
@@ -306,7 +335,7 @@ export function AddBookModal({ isOpen, onClose }: AddBookModalProps) {
                       onChange={(e) => setDescription(e.target.value)}
                       rows={3}
                       className="w-full px-4 py-3 bg-stone-50 dark:bg-[#0B0C10] border border-stone-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-500 dark:text-stone-200 transition-shadow resize-none"
-                      placeholder="Kitap hakkında kısa bir bilgi..."
+                      placeholder={itemType === 'magazine' ? 'Dergi hakkında kısa bir bilgi...' : itemType === 'comic' ? 'Çizgi roman hakkında kısa bir bilgi...' : 'Kitap hakkında kısa bir bilgi...'}
                     />
                   </div>
 
@@ -323,15 +352,15 @@ export function AddBookModal({ isOpen, onClose }: AddBookModalProps) {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1">ISBN (İsteğe Bağlı)</label>
+                    <label className="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1">{itemType === 'magazine' ? 'ISSN (İsteğe Bağlı)' : itemType === 'comic' ? 'ISBN / Barkod (İsteğe Bağlı)' : 'ISBN (İsteğe Bağlı)'}</label>
                     <input
                       type="text"
                       value={isbn}
                       onChange={(e) => setIsbn(e.target.value)}
                       className="w-full px-4 py-3 bg-stone-50 dark:bg-[#0B0C10] border border-stone-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-500 dark:text-stone-200 transition-shadow"
-                      placeholder="Örn: 9780140449136"
+                      placeholder={itemType === 'magazine' ? 'Örn: 1234-5678' : 'Örn: 9780140449136'}
                     />
-                    <p className="text-xs text-stone-500 mt-1">Bu bilgiyi girmek, ileride Excel çıktısı alırken kitaplarınızı eşleştirmenizi kolaylaştırır.</p>
+                    <p className="text-xs text-stone-500 mt-1">Bu bilgiyi girmek, ileride Excel çıktısı alırken eşleştirmenizi kolaylaştırır.</p>
                   </div>
 
                   <div className="pt-4 pb-2">
