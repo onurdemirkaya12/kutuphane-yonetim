@@ -5,6 +5,7 @@ import { Overview } from './views/Overview';
 import { Library } from './views/Library';
 import { Notes } from './views/Notes';
 import { Profile } from './views/Profile';
+import { Admin } from './views/Admin';
 import { Login } from './views/Login';
 import { FocusTimer } from './components/FocusTimer';
 import { AnimatePresence, motion } from 'motion/react';
@@ -102,6 +103,7 @@ function AppContent() {
             {currentView === 'library' && <Library />}
             {currentView === 'notes' && <Notes />}
             {currentView === 'profile' && <Profile />}
+            {currentView === 'admin' && <Admin />}
           </motion.div>
         </AnimatePresence>
       </main>

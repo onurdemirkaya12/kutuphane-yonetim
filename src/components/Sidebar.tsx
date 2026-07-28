@@ -1,10 +1,11 @@
 import React from 'react';
-import { LayoutDashboard, Library, PenLine, User, Moon, Sun } from 'lucide-react';
+import { LayoutDashboard, Library, PenLine, User, Moon, Sun, ShieldAlert } from 'lucide-react';
+import { ADMIN_EMAIL } from '../config/admin';
 import { cn } from '../lib/utils';
 import { useAppContext } from '../context/AppContext';
 import { motion } from 'motion/react';
 
-export type ViewType = 'overview' | 'library' | 'notes' | 'profile';
+export type ViewType = 'overview' | 'library' | 'notes' | 'profile' | 'admin';
 
 interface SidebarProps {
   currentView: ViewType;
@@ -12,14 +13,18 @@ interface SidebarProps {
 }
 
 export function Sidebar({ currentView, onChangeView }: SidebarProps) {
-  const { theme, toggleTheme, userProfile } = useAppContext();
+  const { theme, toggleTheme, userProfile, user } = useAppContext();
   
   const navItems = [
     { id: 'overview', label: 'Genel Bakış', icon: LayoutDashboard },
     { id: 'library', label: 'Kütüphane', icon: Library },
     { id: 'notes', label: 'Notlarım', icon: PenLine },
     { id: 'profile', label: 'Profilim', icon: User },
-  ] as const;
+  ];
+
+  if (user && user.email === ADMIN_EMAIL) {
+    navItems.push({ id: 'admin', label: 'Yönetim', icon: ShieldAlert } as any);
+  }
 
   return (
     <>

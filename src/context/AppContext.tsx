@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { collection, onSnapshot, addDoc, doc, updateDoc, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, doc, updateDoc, query, where, setDoc } from 'firebase/firestore';
 import { User, onAuthStateChanged, signOut } from 'firebase/auth';
 import { db, auth } from '../lib/firebase';
 import { Book, Note, ReadingStat, UserProfile, Shelf, ActivityLog } from '../types';
@@ -10,6 +10,8 @@ interface AppContextType {
   user: User | null;
   authLoading: boolean;
   logout: () => Promise<void>;
+  viewingUserId: string | null;
+  setViewingUserId: (id: string | null) => void;
   books: Book[];
   notes: Note[];
   stats: ReadingStat[];
@@ -50,6 +52,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export function AppProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [viewingUserId, setViewingUserId] = useState<string | null>(null);
   const [books, setBooks] = useState<Book[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [theme, setTheme] = useState<Theme>('light');
@@ -99,9 +102,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // Auth Listener
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       setAuthLoading(false);
+
+      if (currentUser && currentUser.emailVerified) {
+        try {
+          await setDoc(doc(db, 'users', currentUser.uid), {
+            email: currentUser.email,
+            lastLogin: new Date().toISOString()
+          }, { merge: true });
+        } catch (e) {
+          console.error("Error saving user data:", e);
+        }
+      }
     });
     return () => unsubscribe();
   }, []);
@@ -113,8 +127,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setNotes([]);
       return;
     }
+    const targetUserId = viewingUserId || user.uid;
+
     // Kitapları dinle
-    const qBooks = query(collection(db, 'books'), where('userId', '==', user.uid));
+    const qBooks = query(collection(db, 'books'), where('userId', '==', targetUserId));
     const unsubscribeBooks = onSnapshot(qBooks, (snapshot) => {
       const booksData = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -124,7 +140,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
 
     // Notları dinle
-    const qNotes = query(collection(db, 'notes'), where('userId', '==', user.uid));
+    const qNotes = query(collection(db, 'notes'), where('userId', '==', targetUserId));
     const unsubscribeNotes = onSnapshot(qNotes, (snapshot) => {
       const notesData = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -141,7 +157,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       unsubscribeBooks();
       unsubscribeNotes();
     };
-  }, [user]);
+  }, [user, viewingUserId]);
 
   const addBook = async (bookData: Omit<Book, 'id'>) => {
     try {
@@ -164,7 +180,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         await addDoc(collection(db, 'books'), {
           ...bookData,
           quantity: 1,
-          userId: user.uid
+          userId: viewingUserId || user.uid
         });
       }
     } catch (error) {
@@ -205,7 +221,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           await addDoc(collection(db, 'books'), {
             ...bookData,
             quantity: 1,
-            userId: user.uid
+            userId: viewingUserId || user.uid
           });
         }
       } catch (error) {
@@ -221,7 +237,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         content,
         isFavoriteQuote: false,
         createdAt: Date.now(),
-        userId: user.uid
+        userId: viewingUserId || user.uid
       };
       if (bookId) noteData.bookId = bookId;
       if (pageNumber !== undefined) noteData.pageNumber = pageNumber;
