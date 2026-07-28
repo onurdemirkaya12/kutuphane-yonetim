@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
-import { User, Award, BookOpen, Target, Settings, CheckCircle2, ChevronRight, Bookmark, Pencil, Camera, Calendar, LogOut, Database, AlertTriangle, Loader2 } from 'lucide-react';
-import { collection, getDocs, writeBatch, doc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { User, Award, BookOpen, Target, Settings, CheckCircle2, ChevronRight, Bookmark, Pencil, Camera, Calendar, LogOut } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { motion } from 'motion/react';
 
@@ -9,50 +7,6 @@ export function Profile() {
   const { userProfile, updateUserProfile, books, activityLogs, user, logout } = useAppContext();
   const [isEditingGoal, setIsEditingGoal] = useState(false);
   const [tempGoal, setTempGoal] = useState(userProfile.yearlyGoal.toString());
-  const [isMigrating, setIsMigrating] = useState(false);
-  const [migrationStatus, setMigrationStatus] = useState<string | null>(null);
-
-  const handleMigration = async () => {
-    if (!user) return;
-    setIsMigrating(true);
-    setMigrationStatus("Veriler taranıyor...");
-    
-    try {
-      const batch = writeBatch(db);
-      let count = 0;
-      
-      const booksSnapshot = await getDocs(collection(db, 'books'));
-      booksSnapshot.forEach((docSnapshot) => {
-        const data = docSnapshot.data();
-        if (!data.userId) {
-          batch.update(doc(db, 'books', docSnapshot.id), { userId: user.uid });
-          count++;
-        }
-      });
-
-      const notesSnapshot = await getDocs(collection(db, 'notes'));
-      notesSnapshot.forEach((docSnapshot) => {
-        const data = docSnapshot.data();
-        if (!data.userId) {
-          batch.update(doc(db, 'notes', docSnapshot.id), { userId: user.uid });
-          count++;
-        }
-      });
-
-      if (count > 0) {
-        setMigrationStatus("Veriler aktarılıyor...");
-        await batch.commit();
-        setMigrationStatus(`Başarılı! Toplam ${count} kayıt hesabınıza devredildi. Lütfen sayfayı yenileyin.`);
-      } else {
-        setMigrationStatus("Aktarılacak sahipsiz eski veri bulunamadı.");
-      }
-    } catch (error) {
-      console.error(error);
-      setMigrationStatus("Hata! Lütfen Firebase kurallarını esnettiğinizden emin olun.");
-    } finally {
-      setIsMigrating(false);
-    }
-  };
 
   // İstatistikleri Hesapla
   const completedBooks = books.filter(b => b.status === 'completed');
@@ -261,37 +215,6 @@ export function Profile() {
         </div>
       </motion.div>
 
-      {/* Migration Alert */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="glass-panel p-6 rounded-3xl bg-amber-500/10 border border-amber-500/20"
-      >
-        <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-          <div className="flex gap-4">
-            <div className="p-3 bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-xl shrink-0">
-              <AlertTriangle size={24} />
-            </div>
-            <div>
-              <h3 className="font-bold text-stone-900 dark:text-white mb-1">Eski Verileri İçeri Aktar</h3>
-              <p className="text-sm text-stone-600 dark:text-stone-400">Önceden eklediğiniz ve "sahipsiz" görünen kitapları tek tıkla hesabınıza geçirin.</p>
-              {migrationStatus && (
-                <p className={`text-sm font-medium mt-2 ${migrationStatus.includes('Hata') ? 'text-red-500' : 'text-emerald-500'}`}>
-                  Durum: {migrationStatus}
-                </p>
-              )}
-            </div>
-          </div>
-          <button 
-            onClick={handleMigration}
-            disabled={isMigrating}
-            className="w-full md:w-auto px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shrink-0"
-          >
-            {isMigrating ? <Loader2 size={18} className="animate-spin" /> : <Database size={18} />}
-            {isMigrating ? 'Aktarılıyor...' : 'Verileri Aktar'}
-          </button>
-        </div>
-      </motion.div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* İstatistikler */}
