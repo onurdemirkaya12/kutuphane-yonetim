@@ -67,11 +67,15 @@ export function Library() {
     // Türkçe Windows ve Excel varsayılan olarak noktalı virgül (;) ayırıcısını kullanır
     const headers = ['ISBN Numarası', 'Kitap Adı', 'Yazar'];
     
-    const rows = books.map(book => [
-      `"${book.isbn || ''}"`,
-      `"${book.title.replace(/"/g, '""')}"`,
-      `"${book.author.replace(/"/g, '""')}"`
-    ]);
+    const rows = books.flatMap(book => {
+      const quantity = book.quantity || 1;
+      const row = [
+        `"${book.isbn || ''}"`,
+        `"${book.title.replace(/"/g, '""')}"`,
+        `"${book.author.replace(/"/g, '""')}"`
+      ];
+      return Array(quantity).fill(row);
+    });
 
     // Bütün alanları noktalı virgül ile birleştiriyoruz
     const csvContent = bom + [headers.join(';'), ...rows.map(r => r.join(';'))].join('\n');

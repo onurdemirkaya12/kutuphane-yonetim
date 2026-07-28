@@ -1,11 +1,15 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { collection, onSnapshot, addDoc, doc, updateDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { collection, onSnapshot, addDoc, doc, updateDoc, query, where } from 'firebase/firestore';
+import { User, onAuthStateChanged, signOut } from 'firebase/auth';
+import { db, auth } from '../lib/firebase';
 import { Book, Note, ReadingStat, UserProfile, Shelf, ActivityLog } from '../types';
 
 export type Theme = 'light' | 'dark';
 
 interface AppContextType {
+  user: User | null;
+  authLoading: boolean;
+  logout: () => Promise<void>;
   books: Book[];
   notes: Note[];
   stats: ReadingStat[];
@@ -44,6 +48,8 @@ const defaultStats: ReadingStat[] = [
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [books, setBooks] = useState<Book[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [theme, setTheme] = useState<Theme>('light');
@@ -91,10 +97,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  // Auth Listener
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setAuthLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
   // Firebase Realtime Listeners
   useEffect(() => {
+    if (!user) {
+      setBooks([]);
+      setNotes([]);
+      return;
+    }
     // Kitapları dinle
-    const unsubscribeBooks = onSnapshot(collection(db, 'books'), (snapshot) => {
+    const qBooks = query(collection(db, 'books'), where('userId', '==', user.uid));
+    const unsubscribeBooks = onSnapshot(qBooks, (snapshot) => {
       const booksData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -103,7 +124,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
 
     // Notları dinle
-    const unsubscribeNotes = onSnapshot(collection(db, 'notes'), (snapshot) => {
+    const qNotes = query(collection(db, 'notes'), where('userId', '==', user.uid));
+    const unsubscribeNotes = onSnapshot(qNotes, (snapshot) => {
       const notesData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -119,7 +141,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       unsubscribeBooks();
       unsubscribeNotes();
     };
-  }, []);
+  }, [user]);
 
   const addBook = async (bookData: Omit<Book, 'id'>) => {
     try {
@@ -138,9 +160,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const newQuantity = (existingBook.quantity || 1) + 1;
         await updateDoc(bookRef, { quantity: newQuantity });
       } else {
+        if (!user) throw new Error('Oturum açılmamış!');
         await addDoc(collection(db, 'books'), {
           ...bookData,
-          quantity: 1
+          quantity: 1,
+          userId: user.uid
         });
       }
     } catch (error) {
@@ -177,9 +201,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
           const newQuantity = (existingBook.quantity || 1) + 1;
           await updateDoc(bookRef, { quantity: newQuantity });
         } else {
+          if (!user) continue;
           await addDoc(collection(db, 'books'), {
             ...bookData,
-            quantity: 1
+            quantity: 1,
+            userId: user.uid
           });
         }
       } catch (error) {
@@ -190,10 +216,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const addNote = async (content: string, bookId?: string, pageNumber?: number) => {
     try {
+      if (!user) throw new Error('Oturum açılmamış!');
       const noteData: any = {
         content,
         isFavoriteQuote: false,
         createdAt: Date.now(),
+        userId: user.uid
       };
       if (bookId) noteData.bookId = bookId;
       if (pageNumber !== undefined) noteData.pageNumber = pageNumber;
@@ -389,8 +417,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const logout = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error("Çıkış yapılırken hata oluştu: ", error);
+    }
+  };
+
   return (
     <AppContext.Provider value={{
+      user,
+      authLoading,
+      logout,
       books,
       notes,
       stats: defaultStats,
