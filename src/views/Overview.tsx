@@ -178,9 +178,9 @@ export function Overview() {
               <div className="flex items-center gap-4 bg-white/5 p-3 rounded-xl border border-white/10">
                 <div className="text-right">
                   <div className="text-2xl font-bold text-amber-400">
-                    %{Math.round(((activeBook.readPages || 0) / (activeBook.pageCount || 1)) * 100)}
+                    %{activeBook.pageCount ? Math.round(((activeBook.readPages || 0) / activeBook.pageCount) * 100) : 0}
                   </div>
-                  <div className="text-xs text-stone-400">{activeBook.readPages} / {activeBook.pageCount} Sayfa</div>
+                  <div className="text-xs text-stone-400">{activeBook.readPages || 0} / {activeBook.pageCount || '?'} Sayfa</div>
                 </div>
                 <div className="h-10 w-px bg-white/10 mx-2" />
                 {!showProgressInput ? (
