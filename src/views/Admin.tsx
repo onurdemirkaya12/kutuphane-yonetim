@@ -12,7 +12,7 @@ interface UserData {
   lastLogin: string;
 }
 
-export function Admin() {
+export function Admin({ onChangeView }: { onChangeView?: (view: 'overview' | 'library' | 'notes' | 'profile' | 'admin') => void }) {
   const { user, viewingUserId, setViewingUserId } = useAppContext();
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,7 +68,7 @@ export function Admin() {
           <div className="flex items-center gap-3">
             <Eye size={20} />
             <span className="font-medium">
-              Şu anda başka bir kullanıcının kütüphanesini görüntülüyorsunuz. (Sol menüden "Kütüphane"ye geçin)
+              Şu anda başka bir kullanıcının kütüphanesini görüntülüyorsunuz.
             </span>
           </div>
           <button 
@@ -104,7 +104,10 @@ export function Admin() {
                 
                 {u.email !== ADMIN_EMAIL && (
                   <button
-                    onClick={() => setViewingUserId(u.id)}
+                    onClick={() => {
+                      setViewingUserId(u.id);
+                      if (onChangeView) onChangeView('library');
+                    }}
                     className="px-4 py-2 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
                   >
                     Kütüphanesini Gör

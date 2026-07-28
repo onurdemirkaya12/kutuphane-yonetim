@@ -103,7 +103,7 @@ function AppContent() {
             {currentView === 'library' && <Library />}
             {currentView === 'notes' && <Notes />}
             {currentView === 'profile' && <Profile />}
-            {currentView === 'admin' && <Admin />}
+            {currentView === 'admin' && <Admin onChangeView={setCurrentView} />}
           </motion.div>
         </AnimatePresence>
       </main>
