@@ -228,11 +228,12 @@ export function FocusTimer() {
                     <select 
                       value={selectedBookId}
                       onChange={(e) => setSelectedBookId(e.target.value)}
-                      className="w-full px-3 py-2.5 text-sm bg-stone-100 dark:bg-black/20 border-none rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-stone-700 dark:text-stone-300 font-medium"
+                      className="w-full px-3 py-2.5 text-sm bg-stone-100 dark:bg-white/5 border border-transparent dark:border-white/10 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-stone-700 dark:text-stone-200 font-medium appearance-none"
+                      style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='2' stroke='gray' class='w-4 h-4'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5' /%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '1rem' }}
                     >
-                      <option value="">Kitap Seç</option>
+                      <option value="" className="bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-200">Kitap Seç</option>
                       {readingBooks.map(b => (
-                        <option key={b.id} value={b.id}>{b.title}</option>
+                        <option key={b.id} value={b.id} className="bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-200">{b.title}</option>
                       ))}
                     </select>
                   </div>
@@ -246,7 +247,7 @@ export function FocusTimer() {
                         onChange={(e) => setManualMinutes(e.target.value)}
                         placeholder="Örn: 45"
                         min="1"
-                        className="w-full px-4 py-2.5 bg-stone-100 dark:bg-black/20 border border-stone-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-stone-200 font-medium"
+                        className="w-full px-4 py-2.5 bg-stone-100 dark:bg-white/5 border border-transparent dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-stone-800 dark:text-stone-200 font-medium"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -257,7 +258,7 @@ export function FocusTimer() {
                         onChange={(e) => setManualPages(e.target.value)}
                         placeholder="Örn: 20"
                         min="1"
-                        className="w-full px-4 py-2.5 bg-stone-100 dark:bg-black/20 border border-stone-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-stone-200 font-medium"
+                        className="w-full px-4 py-2.5 bg-stone-100 dark:bg-white/5 border border-transparent dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-stone-800 dark:text-stone-200 font-medium"
                       />
                     </div>
                   </div>
