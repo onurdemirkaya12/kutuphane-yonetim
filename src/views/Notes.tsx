@@ -57,7 +57,7 @@ export function Notes() {
       const book = getBook(note.bookId);
       const bookInfo = book ? `Kitap: ${book.title} ${book.author ? `(${book.author})` : ''}` : 'Kitap Bağımsız';
       const pageInfo = note.pageNumber ? ` - Sayfa: ${note.pageNumber}` : '';
-      const dateInfo = `Tarih: ${new Date(note.createdAt).toLocaleDateString('tr-TR')}`;
+      const dateInfo = `Tarih: ${note.createdAt && !isNaN(new Date(note.createdAt).getTime()) ? new Date(note.createdAt).toLocaleDateString('tr-TR') : 'Bilinmiyor'}`;
       return `----------------------------------------\n${bookInfo}${pageInfo}\n${dateInfo}\n\n${note.content}\n`;
     }).join('\n');
     
@@ -325,7 +325,7 @@ export function Notes() {
                     )}
                     
                     <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-stone-400 dark:text-stone-500 uppercase tracking-wider">
-                      <span>{new Date(note.createdAt).toLocaleDateString('tr-TR')}</span>
+                      <span>{note.createdAt && !isNaN(new Date(note.createdAt).getTime()) ? new Date(note.createdAt).toLocaleDateString('tr-TR') : ''}</span>
                       
                       {note.pageNumber && (
                         <span className="flex items-center gap-1 text-amber-600/80 dark:text-amber-400/80">
