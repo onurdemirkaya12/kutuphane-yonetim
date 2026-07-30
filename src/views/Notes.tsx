@@ -38,6 +38,11 @@ export function Notes() {
     }
   }, [notes]);
 
+  const getBook = (bookId?: string) => {
+    if (!bookId) return null;
+    return books.find(b => b.id === bookId) || null;
+  };
+
   const filteredNotes = notes.filter(note => {
     const book = getBook(note.bookId);
     const bookTitle = book?.title?.toLowerCase() || '';
@@ -88,10 +93,6 @@ export function Notes() {
     setEditContent('');
   };
 
-  const getBook = (bookId?: string) => {
-    if (!bookId) return null;
-    return books.find(b => b.id === bookId) || null;
-  };
 
   const selectedBook = getBook(selectedBookId);
 
