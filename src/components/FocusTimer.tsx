@@ -42,9 +42,29 @@ export function FocusTimer() {
   };
 
   const stopTimer = () => {
-    setIsActive(false);
-    setTimeLeft(durationMinutes * 60);
-    setSessionStartTime(null);
+    const elapsedSeconds = durationMinutes * 60 - timeLeft;
+    const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+
+    if (elapsedMinutes > 0 && sessionStartTime) {
+      setIsActive(false);
+      setShowCompletion(true);
+      
+      const endTime = Date.now();
+      
+      logActivity('focus', elapsedMinutes);
+      addReadingSession({
+        startTime: sessionStartTime,
+        endTime,
+        durationMinutes: elapsedMinutes,
+        bookId: selectedBookId || undefined
+      });
+      
+      setSessionStartTime(null);
+    } else {
+      setIsActive(false);
+      setTimeLeft(durationMinutes * 60);
+      setSessionStartTime(null);
+    }
   };
 
   const handleComplete = () => {
