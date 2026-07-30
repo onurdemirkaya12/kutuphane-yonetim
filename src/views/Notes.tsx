@@ -40,9 +40,9 @@ export function Notes() {
 
   const filteredNotes = notes.filter(note => {
     const book = getBook(note.bookId);
-    const bookTitle = book?.title.toLowerCase() || '';
-    const content = note.content.toLowerCase();
-    const query = searchQuery.toLowerCase();
+    const bookTitle = book?.title?.toLowerCase() || '';
+    const content = (note.content || '').toLowerCase();
+    const query = (searchQuery || '').toLowerCase();
     
     const matchesSearch = content.includes(query) || bookTitle.includes(query);
     const matchesBook = filterBookId === 'all' || note.bookId === filterBookId;
