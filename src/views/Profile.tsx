@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Award, BookOpen, Target, Settings, CheckCircle2, ChevronRight, Bookmark, Pencil, Camera, Calendar, LogOut } from 'lucide-react';
+import { User, Award, BookOpen, Target, Settings, CheckCircle2, ChevronRight, Bookmark, Pencil, Camera, Calendar, LogOut, X } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { motion } from 'motion/react';
 
@@ -7,6 +7,9 @@ export function Profile() {
   const { userProfile, updateUserProfile, books, activityLogs, user, logout } = useAppContext();
   const [isEditingGoal, setIsEditingGoal] = useState(false);
   const [tempGoal, setTempGoal] = useState(userProfile.yearlyGoal.toString());
+  
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [tempName, setTempName] = useState(userProfile.name);
 
   // İstatistikleri Hesapla
   const completedBooks = books.filter(b => b.status === 'completed');
@@ -84,6 +87,15 @@ export function Profile() {
     setIsEditingGoal(false);
   };
 
+  const handleSaveName = () => {
+    if (tempName.trim()) {
+      updateUserProfile({ name: tempName.trim() });
+    } else {
+      setTempName(userProfile.name);
+    }
+    setIsEditingName(false);
+  };
+
   // Isı Haritası Verisi (Son 20 hafta x 7 gün = 140 gün)
   const heatmapDays = Array.from({ length: 140 }).map((_, i) => {
     const d = new Date();
@@ -139,10 +151,37 @@ export function Profile() {
           <div className="flex flex-col md:flex-row md:items-start justify-between w-full mb-6 gap-4">
             <div>
               <h1 className="text-3xl font-serif font-semibold text-stone-900 dark:text-stone-100 mb-1 flex items-center justify-center md:justify-start gap-2">
-                {userProfile.name}
-                <button className="text-stone-400 hover:text-amber-500 transition-colors p-1">
-                  <Pencil size={16} />
-                </button>
+                {isEditingName ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={tempName}
+                      onChange={(e) => setTempName(e.target.value)}
+                      className="bg-stone-100 dark:bg-stone-800 border border-stone-300 dark:border-stone-600 rounded-lg px-3 py-1 focus:outline-none focus:ring-2 focus:ring-amber-500 text-2xl font-serif w-48"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSaveName();
+                        if (e.key === 'Escape') {
+                          setTempName(userProfile.name);
+                          setIsEditingName(false);
+                        }
+                      }}
+                    />
+                    <button onClick={handleSaveName} className="text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 p-2 rounded-lg transition-colors">
+                      <CheckCircle2 size={20} />
+                    </button>
+                    <button onClick={() => { setTempName(userProfile.name); setIsEditingName(false); }} className="text-stone-500 hover:text-stone-700 bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 p-2 rounded-lg transition-colors">
+                      <X size={20} />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    {userProfile.name}
+                    <button onClick={() => setIsEditingName(true)} className="text-stone-400 hover:text-amber-500 transition-colors p-1">
+                      <Pencil size={16} />
+                    </button>
+                  </>
+                )}
               </h1>
               <p className="text-stone-500 dark:text-stone-400">
                 {user?.email} • {totalCompletedCount < 5 ? 'Acemi Okur' : totalCompletedCount < 15 ? 'Kitap Kurdu' : 'Bilge Okuyucu'}
