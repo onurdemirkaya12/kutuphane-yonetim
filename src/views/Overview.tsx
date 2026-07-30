@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from 'recharts';
 
 export function Overview() {
-  const { books, notes, theme, updateBook, updateBookStatus } = useAppContext();
+  const { books, notes, theme, updateBook, updateBookStatus, readingSessions } = useAppContext();
 
   // --- 1. Dinamik İstatistikler ve Trend ---
   const currentYear = new Date().getFullYear();
@@ -138,6 +138,22 @@ export function Overview() {
   const favoriteNotes = notes.filter(n => n.isFavoriteQuote);
   const gridBooks = [...books.filter(b => b.status === 'completed')].sort((a, b) => (b.endDate || 0) - (a.endDate || 0));
 
+  // Weekly Focus Time
+  const weeklyFocusMinutes = useMemo(() => {
+    const validSessions = Array.isArray(readingSessions) ? readingSessions : [];
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(today.getDate() - 7);
+    
+    return validSessions
+      .filter(s => new Date(s.startTime) >= sevenDaysAgo)
+      .reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
+  }, [readingSessions]);
+  
+  const weeklyFocusHours = Math.floor(weeklyFocusMinutes / 60);
+  const weeklyFocusRemainingMinutes = weeklyFocusMinutes % 60;
+
   const containerVariants = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1 } } };
   const itemVariants = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } } };
 
@@ -267,6 +283,21 @@ export function Overview() {
               </div>
               <p className="text-sm font-medium text-stone-500 dark:text-stone-400">Favoriler</p>
             </motion.div>
+          </motion.div>
+
+          {/* Haftalık Odaklanma Süresi */}
+          <motion.div className="glass-panel rounded-3xl p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-serif font-semibold text-stone-900 dark:text-stone-100 flex items-center gap-2 mb-1">
+                <Clock size={20} className="text-indigo-500" /> Haftalık Okuma Süresi
+              </h2>
+              <p className="text-stone-500 dark:text-stone-400 text-sm">Son 7 günde harcanan odaklanma süresi.</p>
+            </div>
+            <div className="text-left sm:text-right">
+              <span className="text-4xl font-bold text-stone-900 dark:text-stone-100">
+                {weeklyFocusHours > 0 && `${weeklyFocusHours}s `}{weeklyFocusRemainingMinutes}dk
+              </span>
+            </div>
           </motion.div>
 
           {/* Aylık Okuma Özeti */}

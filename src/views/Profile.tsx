@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { User, Award, BookOpen, Target, Settings, CheckCircle2, ChevronRight, Bookmark, Pencil, Camera, Calendar, LogOut, X } from 'lucide-react';
+import { User, Award, BookOpen, Target, Settings, CheckCircle2, ChevronRight, Bookmark, Pencil, Camera, Calendar, LogOut, X, Moon, Sun, Sunrise, Coffee, Clock } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { motion } from 'motion/react';
 
 export function Profile() {
-  const { userProfile, updateUserProfile, books, activityLogs, user, logout } = useAppContext();
+  const { userProfile, updateUserProfile, books, activityLogs, readingSessions, user, logout } = useAppContext();
   const [isEditingGoal, setIsEditingGoal] = useState(false);
   const [tempGoal, setTempGoal] = useState(userProfile.yearlyGoal.toString());
   
@@ -37,10 +37,33 @@ export function Profile() {
   let favoriteCategory = 'Henüz Yok';
   let maxCount = 0;
   for (const [category, count] of Object.entries(categoryCount)) {
-    if (count > maxCount) {
-      maxCount = count;
+    const numCount = Number(count);
+    if (numCount > maxCount) {
+      maxCount = numCount;
       favoriteCategory = category;
     }
+  }
+
+  const validSessions = Array.isArray(readingSessions) ? readingSessions : [];
+  const totalFocusTime = validSessions.reduce((acc, session) => acc + (session.durationMinutes || 0), 0);
+  const longestSession = validSessions.length > 0 ? Math.max(...validSessions.map(s => s.durationMinutes || 0)) : 0;
+  
+  let character = { name: "Henüz Belli Değil", desc: "Daha fazla okuma seansı kaydetmelisin.", icon: Clock, color: "text-stone-500 dark:text-stone-400" };
+  if (validSessions.length > 0) {
+    let night = 0, early = 0, day = 0, evening = 0;
+    validSessions.forEach(s => {
+      const h = new Date(s.startTime).getHours();
+      if (h >= 22 || h < 5) night++;
+      else if (h >= 5 && h < 10) early++;
+      else if (h >= 10 && h < 17) day++;
+      else evening++;
+    });
+    
+    const max = Math.max(night, early, day, evening);
+    if (max === night) character = { name: "Gece Kuşu", desc: "Sessizliği ve karanlığı seviyorsun.", icon: Moon, color: "text-indigo-500 dark:text-indigo-400" };
+    else if (max === early) character = { name: "Erkenci Kuş", desc: "Güne okuyarak başlıyorsun.", icon: Sunrise, color: "text-emerald-500 dark:text-emerald-400" };
+    else if (max === day) character = { name: "Gündüz Okuru", desc: "Gün ortasında kitap molaları favorin.", icon: Sun, color: "text-amber-500 dark:text-amber-400" };
+    else character = { name: "Akşam Okuru", desc: "Günün yorgunluğunu kitapla atıyorsun.", icon: Coffee, color: "text-orange-500 dark:text-orange-400" };
   }
 
   // Rozetler (Gamification)
@@ -327,6 +350,41 @@ export function Profile() {
           </div>
         </motion.div>
       </div>
+
+      {/* Detaylı Seans İstatistikleri */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25 }}
+        className="grid grid-cols-1 md:grid-cols-3 gap-6"
+      >
+        <div className="glass-panel p-6 rounded-3xl flex flex-col items-center justify-center text-center">
+          <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-4 bg-stone-100 dark:bg-stone-800/50 ${character.color}`}>
+            {React.createElement(character.icon, { size: 32 })}
+          </div>
+          <h2 className="text-sm font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-1">Okuma Karakteri</h2>
+          <p className="text-xl font-bold text-stone-900 dark:text-white mb-1">{character.name}</p>
+          <p className="text-sm text-stone-500 dark:text-stone-400">{character.desc}</p>
+        </div>
+
+        <div className="glass-panel p-6 rounded-3xl md:col-span-2 flex flex-col justify-center">
+          <h2 className="text-sm font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-6">Odaklanma Seansları</h2>
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <p className="text-xs font-medium text-stone-500 dark:text-stone-400 mb-1">Toplam Odaklanma Süresi</p>
+              <p className="text-3xl font-bold text-stone-900 dark:text-white">
+                {Math.floor(totalFocusTime / 60)}<span className="text-lg text-stone-500 font-medium">s</span> {totalFocusTime % 60}<span className="text-lg text-stone-500 font-medium">dk</span>
+              </p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-stone-500 dark:text-stone-400 mb-1">En Uzun Seans</p>
+              <p className="text-3xl font-bold text-stone-900 dark:text-white">
+                {Math.floor(longestSession / 60) > 0 ? `${Math.floor(longestSession / 60)}` : '0'}<span className="text-lg text-stone-500 font-medium">s</span> {longestSession % 60}<span className="text-lg text-stone-500 font-medium">dk</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </motion.div>
 
       {/* Isı Haritası (Heatmap) */}
       <motion.div 

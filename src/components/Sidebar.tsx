@@ -46,7 +46,7 @@ export function Sidebar({ currentView, onChangeView }: SidebarProps) {
             return (
               <button
                 key={item.id}
-                onClick={() => onChangeView(item.id)}
+                onClick={() => onChangeView(item.id as ViewType)}
                 className={cn(
                   "w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-colors text-sm font-medium relative group",
                   isActive 
@@ -99,7 +99,7 @@ export function Sidebar({ currentView, onChangeView }: SidebarProps) {
           return (
             <button
               key={item.id}
-              onClick={() => onChangeView(item.id)}
+              onClick={() => onChangeView(item.id as ViewType)}
               className={cn(
                 "flex flex-col items-center justify-center w-16 py-1 transition-colors relative",
                 isActive 

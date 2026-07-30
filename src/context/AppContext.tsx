@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { collection, onSnapshot, addDoc, doc, updateDoc, query, where, setDoc } from 'firebase/firestore';
 import { User, onAuthStateChanged, signOut } from 'firebase/auth';
 import { db, auth } from '../lib/firebase';
-import { Book, Note, ReadingStat, UserProfile, Shelf, ActivityLog } from '../types';
+import { Book, Note, ReadingStat, UserProfile, Shelf, ActivityLog, ReadingSession } from '../types';
 
 export type Theme = 'light' | 'dark';
 
@@ -18,11 +18,13 @@ interface AppContextType {
   userProfile: UserProfile;
   shelves: Shelf[];
   activityLogs: ActivityLog[];
+  readingSessions: ReadingSession[];
   updateUserProfile: (profile: Partial<UserProfile>) => void;
   addShelf: (name: string, color: string) => void;
   deleteShelf: (id: string) => void;
   toggleBookInShelf: (shelfId: string, bookId: string) => void;
   logActivity: (type: ActivityLog['type'], count?: number) => void;
+  addReadingSession: (session: Omit<ReadingSession, 'id' | 'date'>) => void;
   theme: Theme;
   toggleTheme: () => void;
   addBook: (book: Omit<Book, 'id'>) => void;
@@ -66,13 +68,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
   });
   
   const [shelves, setShelves] = useState<Shelf[]>(() => {
-    const saved = localStorage.getItem('shelves');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('shelves');
+      return saved ? JSON.parse(saved) : [];
+    } catch(e) { return []; }
   });
 
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>(() => {
-    const saved = localStorage.getItem('activityLogs');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('activityLogs');
+      return saved ? JSON.parse(saved) : [];
+    } catch(e) { return []; }
+  });
+
+  const [readingSessions, setReadingSessions] = useState<ReadingSession[]>(() => {
+    try {
+      const saved = localStorage.getItem('readingSessions');
+      return (saved && saved !== 'undefined') ? JSON.parse(saved) : [];
+    } catch(e) { return []; }
   });
 
   // Theme logic
@@ -396,6 +409,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const addReadingSession = (sessionData: Omit<ReadingSession, 'id' | 'date'>) => {
+    setReadingSessions(prev => {
+      const today = new Date().toISOString().split('T')[0];
+      const newSession: ReadingSession = {
+        ...sessionData,
+        id: 'session_' + Date.now().toString(),
+        date: today
+      };
+      const newSessions = [...prev, newSession];
+      localStorage.setItem('readingSessions', JSON.stringify(newSessions));
+      return newSessions;
+    });
+  };
+
   const updateUserProfile = (profileUpdates: Partial<UserProfile>) => {
     setUserProfile(prev => {
       const newProfile = { ...prev, ...profileUpdates };
@@ -454,11 +481,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       userProfile,
       shelves,
       activityLogs,
+      readingSessions,
       updateUserProfile,
       addShelf,
       deleteShelf,
       toggleBookInShelf,
       logActivity,
+      addReadingSession,
       theme,
       toggleTheme,
       addBook,

@@ -4,13 +4,14 @@ import { Timer, X, Play, Pause, Square, BookOpen } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 
 export function FocusTimer() {
-  const { books, updateBook, logActivity } = useAppContext();
+  const { books, updateBook, logActivity, addReadingSession } = useAppContext();
   
   const [isOpen, setIsOpen] = useState(false);
   const [selectedBookId, setSelectedBookId] = useState<string>('');
   const [durationMinutes, setDurationMinutes] = useState<number>(30);
   const [timeLeft, setTimeLeft] = useState<number>(30 * 60);
   const [isActive, setIsActive] = useState(false);
+  const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
   
   const [showCompletion, setShowCompletion] = useState(false);
   const [pagesRead, setPagesRead] = useState<string>('');
@@ -34,19 +35,35 @@ export function FocusTimer() {
   }, [isActive, timeLeft]);
 
   const toggleTimer = () => {
+    if (!isActive && !sessionStartTime) {
+      setSessionStartTime(Date.now());
+    }
     setIsActive(!isActive);
   };
 
   const stopTimer = () => {
     setIsActive(false);
     setTimeLeft(durationMinutes * 60);
+    setSessionStartTime(null);
   };
 
   const handleComplete = () => {
     setIsActive(false);
     setShowCompletion(true);
-    // Log focus time immediately (in minutes)
+    
+    const endTime = Date.now();
+    const startTime = sessionStartTime || (endTime - durationMinutes * 60 * 1000);
+    
+    // Log focus time
     logActivity('focus', durationMinutes);
+    addReadingSession({
+      startTime,
+      endTime,
+      durationMinutes,
+      bookId: selectedBookId || undefined
+    });
+    
+    setSessionStartTime(null);
   };
 
   const submitPages = () => {

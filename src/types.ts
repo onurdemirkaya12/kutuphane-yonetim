@@ -57,3 +57,12 @@ export interface ActivityLog {
   type: 'read' | 'note' | 'focus';
   count: number;
 }
+
+export interface ReadingSession {
+  id: string;
+  date: string; // YYYY-MM-DD format
+  startTime: number; // timestamp in ms
+  endTime: number; // timestamp in ms
+  durationMinutes: number;
+  bookId?: string;
+}
