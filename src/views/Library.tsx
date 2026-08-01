@@ -356,11 +356,7 @@ export function Library() {
       </div>
 
       {viewMode === 'grid' ? (
-        <motion.div 
-          layout
-          className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"
-        >
-          <AnimatePresence>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
             {filteredBooks.map((book) => {
               const StatusIcon = statusMap[book.status].icon;
               const progress = book.pageCount && book.readPages ? Math.round((book.readPages / book.pageCount) * 100) : 0;
@@ -371,7 +367,6 @@ export function Library() {
                   key={book.id}
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
                   whileHover={{ y: -8 }}
                   onClick={() => setSelectedBook(book)}
                   className="anti-gravity cursor-pointer group flex flex-col"
@@ -450,11 +445,9 @@ export function Library() {
                 </motion.div>
               );
             })}
-          </AnimatePresence>
-        </motion.div>
+        </div>
       ) : (
-        <motion.div layout className="flex flex-col gap-3">
-          <AnimatePresence>
+        <div className="flex flex-col gap-3">
             {filteredBooks.map((book) => {
               const StatusIcon = statusMap[book.status].icon;
               const progress = book.pageCount && book.readPages ? Math.round((book.readPages / book.pageCount) * 100) : 0;
@@ -465,7 +458,6 @@ export function Library() {
                   key={book.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
                   onClick={() => setSelectedBook(book)}
                   className="anti-gravity cursor-pointer group flex items-center gap-4 bg-white dark:bg-[#1A1E29] p-3 rounded-2xl border border-stone-200 dark:border-white/5 hover:border-stone-300 dark:hover:border-white/20 transition-all"
                 >
@@ -541,8 +533,7 @@ export function Library() {
                 </motion.div>
               );
             })}
-          </AnimatePresence>
-        </motion.div>
+        </div>
       )}
 
       {activeTab === 'all' && books.length === 0 && (
