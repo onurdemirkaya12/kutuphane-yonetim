@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useDeferredValue } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Plus, BookOpen, Clock, CheckCircle2, ChevronRight, MessageSquarePlus, X, Trash2, Edit3, Save, Search, Download, Wand2, Loader2, Heart, LayoutGrid, List, ArrowUpDown, BookmarkPlus, FolderPlus, Copy, Newspaper, Image as ImageIcon } from 'lucide-react';
@@ -39,7 +39,11 @@ export function Library() {
   const [isAutoFetching, setIsAutoFetching] = useState(false);
   const [autoFetchProgress, setAutoFetchProgress] = useState({ current: 0, total: 0 });
 
-  const uniqueCategories = Array.from(new Set(books.map(b => b.category).filter(Boolean))) as string[];
+  const deferredSearchQuery = useDeferredValue(searchQuery);
+
+  const uniqueCategories = useMemo(() => {
+    return Array.from(new Set(books.map(b => b.category).filter(Boolean))) as string[];
+  }, [books]);
 
   const statusMap = {
     'want-to-read': { label: 'Okunacak', icon: Clock, color: 'text-amber-500' },
@@ -47,21 +51,23 @@ export function Library() {
     'completed': { label: 'Bitti', icon: CheckCircle2, color: 'text-emerald-500' }
   };
 
-  const filteredBooks = books.filter(book => {
-    const matchesSearch = book.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          book.author.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || book.status === statusFilter;
-    const matchesCategory = categoryFilter === 'all' || book.category === categoryFilter;
-    const matchesType = typeFilter === 'all' || (book.itemType || 'book') === typeFilter;
-    return matchesSearch && matchesStatus && matchesCategory && matchesType;
-  }).sort((a, b) => {
-    if (sortBy === 'newest') return (b.addedAt || Date.now()) - (a.addedAt || Date.now());
-    if (sortBy === 'oldest') return (a.addedAt || Date.now()) - (b.addedAt || Date.now());
-    if (sortBy === 'title-asc') return a.title.localeCompare(b.title);
-    if (sortBy === 'title-desc') return b.title.localeCompare(a.title);
-    if (sortBy === 'rating-desc') return (b.rating || 0) - (a.rating || 0);
-    return 0;
-  });
+  const filteredBooks = useMemo(() => {
+    return books.filter(book => {
+      const matchesSearch = book.title.toLowerCase().includes(deferredSearchQuery.toLowerCase()) || 
+                            book.author.toLowerCase().includes(deferredSearchQuery.toLowerCase());
+      const matchesStatus = statusFilter === 'all' || book.status === statusFilter;
+      const matchesCategory = categoryFilter === 'all' || book.category === categoryFilter;
+      const matchesType = typeFilter === 'all' || (book.itemType || 'book') === typeFilter;
+      return matchesSearch && matchesStatus && matchesCategory && matchesType;
+    }).sort((a, b) => {
+      if (sortBy === 'newest') return (b.addedAt || Date.now()) - (a.addedAt || Date.now());
+      if (sortBy === 'oldest') return (a.addedAt || Date.now()) - (b.addedAt || Date.now());
+      if (sortBy === 'title-asc') return a.title.localeCompare(b.title);
+      if (sortBy === 'title-desc') return b.title.localeCompare(a.title);
+      if (sortBy === 'rating-desc') return (b.rating || 0) - (a.rating || 0);
+      return 0;
+    });
+  }, [books, deferredSearchQuery, statusFilter, categoryFilter, typeFilter, sortBy]);
 
   const exportToCSV = () => {
     // UTF-8 BOM ekliyoruz ki Excel Türkçe karakterleri (ş,ğ,ü vb.) sorunsuz okusun
